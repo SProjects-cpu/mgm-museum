@@ -1,3 +1,3 @@
-git commit -m "Razorpay-integration-complete"
+git commit -m "Fix-linter-errors"
 git push origin main
 vercel --prod --yes

@@ -30,22 +30,24 @@ interface ExhibitionDialogProps {
   mode?: "create" | "edit";
   exhibition?: any;
   trigger?: React.ReactNode;
+  onSuccess?: () => void;
 }
 
 export function ExhibitionDialog({
   mode = "create",
   exhibition,
   trigger,
+  onSuccess,
 }: ExhibitionDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: exhibition?.name || "",
     description: exhibition?.description || "",
+    shortDescription: exhibition?.short_description || "",
     category: exhibition?.category || "planetarium",
     capacity: exhibition?.capacity || 100,
-    duration: exhibition?.duration || 60,
-    price: exhibition?.price || 100,
+    durationMinutes: exhibition?.duration_minutes || 60,
     status: exhibition?.status || "active",
     featured: exhibition?.featured || false,
   });
@@ -54,30 +56,49 @@ export function ExhibitionDialog({
     e.preventDefault();
     setLoading(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      const url = mode === "create" 
+        ? '/api/admin/exhibitions'
+        : `/api/admin/exhibitions/${exhibition.id}`;
+      
+      const method = mode === "create" ? 'POST' : 'PUT';
 
-    toast.success(
-      mode === "create"
-        ? "Exhibition created successfully!"
-        : "Exhibition updated successfully!"
-    );
-
-    setLoading(false);
-    setOpen(false);
-
-    // Reset form if creating
-    if (mode === "create") {
-      setFormData({
-        name: "",
-        description: "",
-        category: "planetarium",
-        capacity: 100,
-        duration: 60,
-        price: 100,
-        status: "active",
-        featured: false,
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
       });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to save exhibition');
+      }
+
+      toast.success(
+        mode === "create"
+          ? "Exhibition created successfully!"
+          : "Exhibition updated successfully!"
+      );
+
+      setOpen(false);
+      onSuccess?.();
+
+      if (mode === "create") {
+        setFormData({
+          name: "",
+          description: "",
+          shortDescription: "",
+          category: "planetarium",
+          capacity: 100,
+          durationMinutes: 60,
+          status: "active",
+          featured: false,
+        });
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to save exhibition');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -120,7 +141,20 @@ export function ExhibitionDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description">Description *</Label>
+              <Label htmlFor="shortDescription">Short Description *</Label>
+              <Input
+                id="shortDescription"
+                value={formData.shortDescription}
+                onChange={(e) =>
+                  setFormData({ ...formData, shortDescription: e.target.value })
+                }
+                placeholder="Brief description for listings..."
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Full Description</Label>
               <Textarea
                 id="description"
                 value={formData.description}
@@ -128,8 +162,7 @@ export function ExhibitionDialog({
                   setFormData({ ...formData, description: e.target.value })
                 }
                 placeholder="Describe the exhibition experience..."
-                rows={4}
-                required
+                rows={3}
               />
             </div>
 
@@ -196,35 +229,18 @@ export function ExhibitionDialog({
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="duration">Duration (min) *</Label>
+                <Label htmlFor="durationMinutes">Duration (min) *</Label>
                 <Input
-                  id="duration"
+                  id="durationMinutes"
                   type="number"
-                  value={formData.duration}
+                  value={formData.durationMinutes}
                   onChange={(e) =>
                     setFormData({
                       ...formData,
-                      duration: parseInt(e.target.value),
+                      durationMinutes: parseInt(e.target.value),
                     })
                   }
                   min="1"
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="price">Price (₹) *</Label>
-                <Input
-                  id="price"
-                  type="number"
-                  value={formData.price}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      price: parseInt(e.target.value),
-                    })
-                  }
-                  min="0"
                   required
                 />
               </div>

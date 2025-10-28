@@ -215,43 +215,6 @@ export async function PUT(request: NextRequest) {
   }
 }
 
-// DELETE - Delete exhibition
-export async function DELETE(request: NextRequest) {
-  try {
-    const supabase = createClient();
-    const searchParams = request.nextUrl.searchParams;
-    const id = searchParams.get('id');
-
-    if (!id) {
-      return NextResponse.json(
-        { error: 'Exhibition ID is required' },
-        { status: 400 }
-      );
-    }
-
-    // Delete exhibition (cascading deletes will handle related records)
-    const { error } = await supabase
-      .from('exhibitions')
-      .delete()
-      .eq('id', id as any);
-
-    if (error) {
-      console.error('Error deleting exhibition:', error);
-      return NextResponse.json(
-        { error: 'Failed to delete exhibition', details: error.message },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({ 
-      message: 'Exhibition deleted successfully'
-    });
-  } catch (error: any) {
-    console.error('Error in delete exhibition API:', error);
-    return NextResponse.json(
-      { error: 'Internal server error', details: error.message },
-      { status: 500 }
-    );
-  }
-}
+// DELETE - Delete exhibition (handled by [id]/route.ts)
+// This endpoint is deprecated - use DELETE /api/admin/exhibitions/[id] instead
 

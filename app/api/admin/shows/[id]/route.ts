@@ -17,8 +17,8 @@ export async function GET(
       .from('shows')
       .select(`
         *,
-        pricing:show_pricing(*),
-        time_slots:show_time_slots(*)
+        pricing:pricing(*),
+        time_slots:time_slots(*)
       `)
       .eq('id', id)
       .single();
@@ -110,13 +110,13 @@ export async function DELETE(
 
     // Delete related pricing first
     await supabase
-      .from('show_pricing')
+      .from('pricing')
       .delete()
       .eq('show_id', id);
 
     // Delete related time slots
     await supabase
-      .from('show_time_slots')
+      .from('time_slots')
       .delete()
       .eq('show_id', id);
 

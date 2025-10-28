@@ -15,8 +15,8 @@ export async function GET(request: NextRequest) {
       .from('shows')
       .select(`
         *,
-        pricing:show_pricing(*),
-        time_slots:show_time_slots(*)
+        pricing:pricing(*),
+        time_slots:time_slots(*)
       `)
       .order('created_at', { ascending: false });
 
@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
         valid_from: p.validFrom || new Date().toISOString().split('T')[0]
       }));
 
-      await supabase.from('show_pricing').insert(pricingData);
+      await supabase.from('pricing').insert(pricingData);
     }
 
     // Add time slots if provided
@@ -138,7 +138,7 @@ export async function POST(request: NextRequest) {
         active: slot.active !== false
       }));
 
-      await supabase.from('show_time_slots').insert(slotsData);
+      await supabase.from('time_slots').insert(slotsData);
     }
 
     return NextResponse.json({ 
