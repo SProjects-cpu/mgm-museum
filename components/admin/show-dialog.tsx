@@ -28,17 +28,18 @@ interface ShowDialogProps {
   mode?: "create" | "edit";
   show?: any;
   trigger?: React.ReactNode;
+  onSuccess?: () => void;
 }
 
-export function ShowDialog({ mode = "create", show, trigger }: ShowDialogProps) {
+export function ShowDialog({ mode = "create", show, trigger, onSuccess }: ShowDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: show?.name || "",
     description: show?.description || "",
-    type: show?.type || "Planetarium",
-    duration: show?.duration || 45,
-    capacity: show?.capacity || 100,
+    type: show?.type || "planetarium",
+    durationMinutes: show?.duration_minutes || 45,
+    thumbnailUrl: show?.thumbnail_url || "",
     status: show?.status || "active",
   });
 
@@ -46,24 +47,45 @@ export function ShowDialog({ mode = "create", show, trigger }: ShowDialogProps) 
     e.preventDefault();
     setLoading(true);
 
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    toast.success(
-      mode === "create" ? "Show created successfully!" : "Show updated successfully!"
-    );
-
-    setLoading(false);
-    setOpen(false);
-
-    if (mode === "create") {
-      setFormData({
-        name: "",
-        description: "",
-        type: "Planetarium",
-        duration: 45,
-        capacity: 100,
-        status: "active",
+    try {
+      const url = mode === "create" 
+        ? '/api/admin/shows'
+        : `/api/admin/shows/${show.id}`;
+      
+      const method = mode === "create" ? 'POST' : 'PUT';
+      
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
       });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to save show');
+      }
+
+      toast.success(
+        mode === "create" ? "Show created successfully!" : "Show updated successfully!"
+      );
+
+      setOpen(false);
+      onSuccess?.();
+
+      if (mode === "create") {
+        setFormData({
+          name: "",
+          description: "",
+          type: "planetarium",
+          durationMinutes: 45,
+          thumbnailUrl: "",
+          status: "active",
+        });
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to save show');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -126,10 +148,10 @@ export function ShowDialog({ mode = "create", show, trigger }: ShowDialogProps) 
                   <SelectValue placeholder="Select type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Planetarium">Planetarium</SelectItem>
-                  <SelectItem value="3D Theatre">3D Theatre</SelectItem>
-                  <SelectItem value="Holography">Holography</SelectItem>
-                  <SelectItem value="Live Demo">Live Demo</SelectItem>
+                  <SelectItem value="planetarium">Planetarium</SelectItem>
+                  <SelectItem value="3d_theatre">3D Theatre</SelectItem>
+                  <SelectItem value="holography">Holography</SelectItem>
+                  <SelectItem value="live_demo">Live Demo</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -159,9 +181,9 @@ export function ShowDialog({ mode = "create", show, trigger }: ShowDialogProps) 
               <Input
                 id="show-duration"
                 type="number"
-                value={formData.duration}
+                value={formData.durationMinutes}
                 onChange={(e) =>
-                  setFormData({ ...formData, duration: parseInt(e.target.value) })
+                  setFormData({ ...formData, durationMinutes: parseInt(e.target.value) })
                 }
                 min="1"
                 required
@@ -169,16 +191,14 @@ export function ShowDialog({ mode = "create", show, trigger }: ShowDialogProps) 
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="show-capacity">Capacity *</Label>
+              <Label htmlFor="show-thumbnail">Thumbnail URL</Label>
               <Input
-                id="show-capacity"
-                type="number"
-                value={formData.capacity}
+                id="show-thumbnail"
+                value={formData.thumbnailUrl}
                 onChange={(e) =>
-                  setFormData({ ...formData, capacity: parseInt(e.target.value) })
+                  setFormData({ ...formData, thumbnailUrl: e.target.value })
                 }
-                min="1"
-                required
+                placeholder="https://..."
               />
             </div>
           </div>

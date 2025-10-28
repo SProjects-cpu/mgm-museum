@@ -1,12 +1,12 @@
 import { Metadata } from "next";
-import { AdminExhibitionsTable } from "@/components/admin-exhibitions-table";
+import { ExhibitionsManagement } from "./exhibitions-management-api";
 
 export const metadata: Metadata = {
   title: "Exhibitions Management",
 };
 
 export default function ExhibitionsPage() {
-  return <AdminExhibitionsTable />;
+  return <ExhibitionsManagement />;
 }
 
 
