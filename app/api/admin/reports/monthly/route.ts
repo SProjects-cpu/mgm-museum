@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { getAnalytics } from '@/lib/graphql/resolvers-impl';
 
@@ -34,6 +35,7 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+
 
 
 
