@@ -32,6 +32,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
+!.env.production
 
 # vercel
 .vercel
@@ -39,3 +41,31 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# IDE and AI assistant rules
+.clinerules/byterover-rules.md
+.kilocode/rules/byterover-rules.md
+.roo/rules/byterover-rules.md
+.windsurf/rules/byterover-rules.md
+.cursor/rules/byterover-rules.mdc
+.kiro/steering/byterover-rules.md
+.qoder/rules/byterover-rules.md
+.augment/rules/byterover-rules.md
+
+# Documentation files (internal use only - don't push to production)
+fix_errors.md
+*_GUIDE.md
+*_IMPLEMENTATION*.md
+*_FIXES*.md
+*_ANALYSIS.md
+*_ROADMAP.md
+*_CLEANUP.md
+*_INTEGRATION*.md
+BOOKING_*.md
+PAYMENT_*.md
+404_*.md
+QUICK_START_*.md
+REMAINING_*.md
+Ticket_*.md
+*.png
+test-output/
