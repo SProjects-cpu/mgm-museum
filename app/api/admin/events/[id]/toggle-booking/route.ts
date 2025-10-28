@@ -11,34 +11,34 @@ export async function POST(
     const { id } = await params;
     const supabase = createClient();
     const body = await request.json();
-    const { bookingEnabled } = body;
+    const { status } = body;
 
-    if (typeof bookingEnabled !== 'boolean') {
+    if (!status || !['upcoming', 'ongoing', 'completed', 'cancelled'].includes(status)) {
       return NextResponse.json(
-        { error: 'bookingEnabled must be a boolean' },
+        { error: 'Valid status is required (upcoming, ongoing, completed, cancelled)' },
         { status: 400 }
       );
     }
 
-    // Update booking status
+    // Update event status instead
     const { data: event, error } = await supabase
       .from('events')
-      .update({ booking_enabled: bookingEnabled } as any)
+      .update({ status })
       .eq('id', id as any)
       .select()
       .single();
 
     if (error) {
-      console.error('Error toggling booking status:', error);
+      console.error('Error updating event status:', error);
       return NextResponse.json(
-        { error: 'Failed to update booking status' },
+        { error: 'Failed to update event status' },
         { status: 500 }
       );
     }
 
     return NextResponse.json({ 
       event,
-      message: `Booking ${bookingEnabled ? 'enabled' : 'disabled'} successfully`
+      message: `Event status updated to ${status} successfully`
     });
   } catch (error) {
     console.error('Error in toggle booking API:', error);

@@ -33,6 +33,8 @@ export default function PricingManagement() {
   const [items, setItems] = useState<PricingItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [editingPrice, setEditingPrice] = useState<EditingPrice | null>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetchPricingData();
@@ -75,6 +77,35 @@ export default function PricingManagement() {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleUpdatePrice = async (pricingId: string, newPrice: number) => {
+    if (newPrice < 0) {
+      alert("Price cannot be negative");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const response = await fetch(`/api/admin/pricing/${pricingId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ price: newPrice }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to update price");
+      }
+
+      // Refresh pricing data
+      await fetchPricingData();
+      setEditingPrice(null);
+    } catch (err: any) {
+      alert(err.message || "Failed to update price");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -142,11 +173,53 @@ export default function PricingManagement() {
                       <TableRow key={item.id}>
                         <TableCell className="font-medium">{item.name}</TableCell>
                         <TableCell>
-                          <div className="flex flex-wrap gap-1">
+                          <div className="flex flex-wrap gap-2">
                             {item.pricing.map((p) => (
-                              <Badge key={p.id} variant="outline" className="text-xs">
-                                {TICKET_TYPE_LABELS[p.ticketType as keyof typeof TICKET_TYPE_LABELS] || p.ticketType}
-                              </Badge>
+                              <div key={p.id} className="flex items-center gap-1 bg-muted/50 px-2 py-1 rounded">
+                                <Badge variant="outline" className="text-xs">
+                                  {TICKET_TYPE_LABELS[p.ticketType as keyof typeof TICKET_TYPE_LABELS] || p.ticketType}
+                                </Badge>
+                                {editingPrice?.id === p.id ? (
+                                  <div className="flex items-center gap-1">
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      value={editingPrice.price}
+                                      onChange={(e) =>
+                                        setEditingPrice({
+                                          ...editingPrice,
+                                          price: parseFloat(e.target.value) || 0,
+                                        })
+                                      }
+                                      className="w-16 h-6 px-2 border rounded text-sm"
+                                      disabled={saving}
+                                    />
+                                    <button
+                                      onClick={() => handleUpdatePrice(p.id, editingPrice.price)}
+                                      disabled={saving}
+                                      className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded hover:bg-primary/90 disabled:opacity-50"
+                                    >
+                                      ✓
+                                    </button>
+                                    <button
+                                      onClick={() => setEditingPrice(null)}
+                                      disabled={saving}
+                                      className="text-xs bg-destructive text-destructive-foreground px-2 py-1 rounded hover:bg-destructive/90 disabled:opacity-50"
+                                    >
+                                      ✕
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() =>
+                                      setEditingPrice({ id: p.id, price: p.price })
+                                    }
+                                    className="text-xs text-primary hover:underline font-semibold"
+                                  >
+                                    ₹{p.price.toFixed(2)}
+                                  </button>
+                                )}
+                              </div>
                             ))}
                           </div>
                         </TableCell>
@@ -199,11 +272,53 @@ export default function PricingManagement() {
                       <TableRow key={item.id}>
                         <TableCell className="font-medium">{item.name}</TableCell>
                         <TableCell>
-                          <div className="flex flex-wrap gap-1">
+                          <div className="flex flex-wrap gap-2">
                             {item.pricing.map((p) => (
-                              <Badge key={p.id} variant="outline" className="text-xs">
-                                {TICKET_TYPE_LABELS[p.ticketType as keyof typeof TICKET_TYPE_LABELS] || p.ticketType}
-                              </Badge>
+                              <div key={p.id} className="flex items-center gap-1 bg-muted/50 px-2 py-1 rounded">
+                                <Badge variant="outline" className="text-xs">
+                                  {TICKET_TYPE_LABELS[p.ticketType as keyof typeof TICKET_TYPE_LABELS] || p.ticketType}
+                                </Badge>
+                                {editingPrice?.id === p.id ? (
+                                  <div className="flex items-center gap-1">
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      value={editingPrice.price}
+                                      onChange={(e) =>
+                                        setEditingPrice({
+                                          ...editingPrice,
+                                          price: parseFloat(e.target.value) || 0,
+                                        })
+                                      }
+                                      className="w-16 h-6 px-2 border rounded text-sm"
+                                      disabled={saving}
+                                    />
+                                    <button
+                                      onClick={() => handleUpdatePrice(p.id, editingPrice.price)}
+                                      disabled={saving}
+                                      className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded hover:bg-primary/90 disabled:opacity-50"
+                                    >
+                                      ✓
+                                    </button>
+                                    <button
+                                      onClick={() => setEditingPrice(null)}
+                                      disabled={saving}
+                                      className="text-xs bg-destructive text-destructive-foreground px-2 py-1 rounded hover:bg-destructive/90 disabled:opacity-50"
+                                    >
+                                      ✕
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    onClick={() =>
+                                      setEditingPrice({ id: p.id, price: p.price })
+                                    }
+                                    className="text-xs text-primary hover:underline font-semibold"
+                                  >
+                                    ₹{p.price.toFixed(2)}
+                                  </button>
+                                )}
+                              </div>
                             ))}
                           </div>
                         </TableCell>
