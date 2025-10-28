@@ -69,3 +69,4 @@ REMAINING_*.md
 Ticket_*.md
 *.png
 test-output/
+.vercel

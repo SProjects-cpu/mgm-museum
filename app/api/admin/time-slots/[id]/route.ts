@@ -36,9 +36,10 @@ async function checkAdminAuth(supabase: any) {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supabase = await createClient();
     const auth = await checkAdminAuth(supabase);
     
@@ -56,7 +57,7 @@ export async function GET(
         exhibition:exhibitions(id, title, slug),
         event:events(id, title, slug)
       `)
-      .eq('id', params.id)
+      .eq('id', id)
       .single();
     
     if (error || !slot) {
@@ -85,9 +86,10 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supabase = await createClient();
     const auth = await checkAdminAuth(supabase);
     
@@ -115,7 +117,7 @@ export async function PATCH(
     const { data: slot, error } = await supabase
       .from('time_slots')
       .update(validation.data)
-      .eq('id', params.id)
+      .eq('id', id)
       .select()
       .single();
     
@@ -126,7 +128,7 @@ export async function PATCH(
     // Log capacity change if capacity was updated
     if (validation.data.capacity !== undefined) {
       await supabase.from('capacity_logs').insert({
-        time_slot_id: params.id,
+        time_slot_id: id,
         action: 'capacity_adjusted',
         performed_by: auth.user.id,
         notes: `Capacity updated to ${validation.data.capacity}`,
@@ -153,9 +155,10 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supabase = await createClient();
     const auth = await checkAdminAuth(supabase);
     
@@ -170,7 +173,7 @@ export async function DELETE(
     const { data: bookings } = await supabase
       .from('bookings_enhanced')
       .select('id')
-      .eq('time_slot_id', params.id)
+      .eq('time_slot_id', id)
       .eq('status', 'confirmed');
     
     if (bookings && bookings.length > 0) {
@@ -187,7 +190,7 @@ export async function DELETE(
     const { error } = await supabase
       .from('time_slots')
       .update({ is_active: false })
-      .eq('id', params.id);
+      .eq('id', id);
     
     if (error) {
       throw new Error('Failed to delete time slot');
