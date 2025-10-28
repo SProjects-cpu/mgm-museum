@@ -35,7 +35,7 @@ export default function AdminCapacityPage() {
   const fetchOverrides = async () => {
     try {
       const supabase = getServiceSupabase();
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('capacity_overrides')
         .select('*')
         .order('override_date');
@@ -78,7 +78,7 @@ export default function AdminCapacityPage() {
 
       if (editing.id) {
         // Update existing
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('capacity_overrides')
           .update({
             capacity: editing.capacity,
@@ -92,10 +92,10 @@ export default function AdminCapacityPage() {
         toast.success('Capacity override updated');
       } else {
         // Create new
-        const { error } = await supabase
+        const { error } = await (supabase as any)
           .from('capacity_overrides')
           .insert({
-            override_date: editing.override_date,
+            override_date: selectedDate.toISOString().split('T')[0],
             capacity: editing.capacity,
             reason: editing.reason,
             is_closed: editing.is_closed,
@@ -122,7 +122,7 @@ export default function AdminCapacityPage() {
     setLoading(true);
     try {
       const supabase = getServiceSupabase();
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('capacity_overrides')
         .delete()
         .eq('id', id);
