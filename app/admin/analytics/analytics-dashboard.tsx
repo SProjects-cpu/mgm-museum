@@ -1,7 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 import {
   TrendingUp,
   Users,
@@ -129,6 +131,44 @@ const COLORS = [
 ];
 
 export function AnalyticsDashboard() {
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async (type: string = 'bookings') => {
+    try {
+      setExporting(true);
+      toast.info('Generating report...');
+
+      const endDate = new Date().toISOString();
+      const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+
+      const response = await fetch(
+        `/api/admin/reports/export?type=${type}&format=csv&startDate=${startDate}&endDate=${endDate}`
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to export report');
+      }
+
+      // Download the file
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${type}-report-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(url);
+
+      toast.success('Report exported successfully');
+    } catch (error) {
+      console.error('Export error:', error);
+      toast.error('Failed to export report');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -144,9 +184,9 @@ export function AnalyticsDashboard() {
             <Calendar className="w-4 h-4 mr-2" />
             Last 30 Days
           </Button>
-          <Button>
+          <Button onClick={() => handleExport('bookings')} disabled={exporting}>
             <Download className="w-4 h-4 mr-2" />
-            Export Report
+            {exporting ? 'Exporting...' : 'Export Report'}
           </Button>
         </div>
       </div>
