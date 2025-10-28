@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Plus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { PricingManager } from "./pricing-manager";
 
 interface ShowDialogProps {
   mode?: "create" | "edit";
@@ -41,6 +42,7 @@ export function ShowDialog({ mode = "create", show, trigger, onSuccess }: ShowDi
     durationMinutes: show?.duration_minutes || 45,
     thumbnailUrl: show?.thumbnail_url || "",
     status: show?.status || "active",
+    pricing: show?.pricing || [],
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -80,6 +82,7 @@ export function ShowDialog({ mode = "create", show, trigger, onSuccess }: ShowDi
           durationMinutes: 45,
           thumbnailUrl: "",
           status: "active",
+          pricing: [],
         });
       }
     } catch (error: any) {
@@ -201,6 +204,16 @@ export function ShowDialog({ mode = "create", show, trigger, onSuccess }: ShowDi
                 placeholder="https://..."
               />
             </div>
+          </div>
+
+          {/* Pricing Management */}
+          <div className="border-t pt-4">
+            <PricingManager
+              pricing={formData.pricing}
+              onChange={(pricing) => setFormData({ ...formData, pricing })}
+              label="Show Pricing"
+              description="Add ticket pricing for different visitor types"
+            />
           </div>
 
           <DialogFooter>

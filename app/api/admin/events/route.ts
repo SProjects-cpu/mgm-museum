@@ -69,9 +69,51 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Validate required fields
-    if (!title || !eventDate || !startTime || !endTime || !location) {
+    if (!title) {
       return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Event title is required' },
+        { status: 400 }
+      );
+    }
+    if (!eventDate) {
+      return NextResponse.json(
+        { error: 'Event date is required' },
+        { status: 400 }
+      );
+    }
+    if (!startTime) {
+      return NextResponse.json(
+        { error: 'Start time is required' },
+        { status: 400 }
+      );
+    }
+    if (!endTime) {
+      return NextResponse.json(
+        { error: 'End time is required' },
+        { status: 400 }
+      );
+    }
+    if (!location) {
+      return NextResponse.json(
+        { error: 'Event location is required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate time format
+    const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/;
+    if (!timeRegex.test(startTime) || !timeRegex.test(endTime)) {
+      return NextResponse.json(
+        { error: 'Invalid time format. Use HH:MM format' },
+        { status: 400 }
+      );
+    }
+
+    // Validate date format
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(eventDate)) {
+      return NextResponse.json(
+        { error: 'Invalid date format. Use YYYY-MM-DD format' },
         { status: 400 }
       );
     }

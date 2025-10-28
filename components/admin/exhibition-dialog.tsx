@@ -25,12 +25,20 @@ import { Switch } from "@/components/ui/switch";
 import { Plus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { EXHIBITION_CATEGORY_LABELS } from "@/types";
+import { PricingManager } from "./pricing-manager";
 
 interface ExhibitionDialogProps {
   mode?: "create" | "edit";
   exhibition?: any;
   trigger?: React.ReactNode;
   onSuccess?: () => void;
+}
+
+interface PricingTier {
+  id?: string;
+  ticketType: string;
+  price: number;
+  active?: boolean;
 }
 
 export function ExhibitionDialog({
@@ -50,6 +58,7 @@ export function ExhibitionDialog({
     durationMinutes: exhibition?.duration_minutes || 60,
     status: exhibition?.status || "active",
     featured: exhibition?.featured || false,
+    pricing: exhibition?.pricing || [],
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -93,6 +102,7 @@ export function ExhibitionDialog({
           durationMinutes: 60,
           status: "active",
           featured: false,
+          pricing: [],
         });
       }
     } catch (error: any) {
@@ -151,6 +161,20 @@ export function ExhibitionDialog({
                 placeholder="Brief description for listings..."
                 required
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={formData.featured}
+                  onChange={(e) =>
+                    setFormData({ ...formData, featured: e.target.checked })
+                  }
+                  className="rounded"
+                />
+                Feature on Homepage
+              </Label>
             </div>
 
             <div className="space-y-2">
@@ -246,18 +270,16 @@ export function ExhibitionDialog({
               </div>
             </div>
 
-            <div className="flex items-center space-x-2">
-              <Switch
-                id="featured"
-                checked={formData.featured}
-                onCheckedChange={(checked) =>
-                  setFormData({ ...formData, featured: checked })
-                }
-              />
-              <Label htmlFor="featured" className="cursor-pointer">
-                Feature this exhibition on homepage
-              </Label>
-            </div>
+          </div>
+
+          {/* Pricing Management */}
+          <div className="border-t pt-4">
+            <PricingManager
+              pricing={formData.pricing}
+              onChange={(pricing) => setFormData({ ...formData, pricing })}
+              label="Exhibition Pricing"
+              description="Add ticket pricing for different visitor types"
+            />
           </div>
 
           <DialogFooter>
