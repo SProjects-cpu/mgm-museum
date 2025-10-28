@@ -16,6 +16,8 @@ export default function PaymentSettingsPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showSecrets, setShowSecrets] = useState(false);
+  const [encryptionKeyConfigured, setEncryptionKeyConfigured] = useState(false);
+  const [setupInstructions, setSetupInstructions] = useState<any>(null);
   
   const [formData, setFormData] = useState({
     environment: "test",
@@ -31,9 +33,10 @@ export default function PaymentSettingsPage() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [credsRes, configsRes] = await Promise.all([
+      const [credsRes, configsRes, envRes] = await Promise.all([
         fetch("/api/admin/payment-settings/credentials"),
-        fetch("/api/admin/payment-settings/configurations")
+        fetch("/api/admin/payment-settings/configurations"),
+        fetch("/api/admin/payment-settings/env-setup")
       ]);
 
       if (credsRes.ok) {
@@ -44,6 +47,12 @@ export default function PaymentSettingsPage() {
       if (configsRes.ok) {
         const data = await configsRes.json();
         setConfigurations(data.configurations || []);
+      }
+
+      if (envRes.ok) {
+        const data = await envRes.json();
+        setEncryptionKeyConfigured(data.encryptionKeyConfigured);
+        setSetupInstructions(data.setupInstructions);
       }
     } catch (error) {
       console.error("Error fetching data:", error);
@@ -124,6 +133,26 @@ export default function PaymentSettingsPage() {
         <h1 className="text-3xl font-bold">Payment Settings</h1>
         <p className="text-muted-foreground">Manage Razorpay credentials and payment configurations</p>
       </div>
+
+      {!encryptionKeyConfigured && (
+        <Card className="border-yellow-500 bg-yellow-50">
+          <CardHeader>
+            <CardTitle className="text-yellow-900">⚠️ Setup Required</CardTitle>
+            <CardDescription className="text-yellow-800">Encryption key not configured</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <p className="text-sm text-yellow-900">
+              Add the following to your <code className="bg-yellow-100 px-2 py-1 rounded">.env.local</code> file:
+            </p>
+            <div className="bg-yellow-100 p-3 rounded font-mono text-sm break-all">
+              DATABASE_ENCRYPTION_KEY=YzQ3GlNzntjVLy16kSgvEJZS4PNHDdit19QiosSftxM=
+            </div>
+            <p className="text-xs text-yellow-800">
+              After adding the key, restart your development server and refresh this page.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
