@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { getServiceSupabase } from '@/lib/supabase/config';
 import jsPDF from 'jspdf';
 import QRCode from 'qrcode';

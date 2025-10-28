@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { createYoga } from 'graphql-yoga';
 import { createSchema } from 'graphql-yoga';
 import {

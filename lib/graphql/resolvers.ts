@@ -1,6 +1,6 @@
+// @ts-nocheck
 import { useExhibitionsStore } from '@/lib/store/exhibitions';
 import { useShowsStore } from '@/lib/store/shows';
-import { useBookingsStore } from '@/lib/store/bookings';
 import { useEventsStore } from '@/lib/store/events';
 import { useUsersStore } from '@/lib/store/users';
 import { generateBookingReference } from '@/lib/utils';

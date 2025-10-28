@@ -1,3 +1,3 @@
-git commit -m "Admin panel API integration and real-time updates"
+git commit -m "Razorpay-integration-complete"
 git push origin main
 vercel --prod --yes

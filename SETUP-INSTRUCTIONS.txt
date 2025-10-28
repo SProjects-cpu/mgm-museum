@@ -1,0 +1,338 @@
+================================================================================
+MGM MUSEUM - COMPLETE SETUP INSTRUCTIONS
+================================================================================
+
+CONGRATULATIONS! Your admin panel and payment integration are ready.
+
+================================================================================
+WHAT'S BEEN COMPLETED
+================================================================================
+
+✅ ADMIN PANEL (100% Complete)
+  - Shows Management: Create, edit, delete shows with real-time API
+  - Events Management: Full CRUD operations with status tracking
+  - Exhibitions Management: Real-time updates with featured toggle
+  - Analytics & Reports: Export functionality (CSV/JSON)
+  - Content Management: Real-time data sync
+
+✅ RAZORPAY PAYMENT INTEGRATION (Phase 1 Complete)
+  - Database schema with payment tracking
+  - Order creation API endpoint
+  - Payment verification API endpoint
+  - Webhook handler for payment events
+  - Frontend Razorpay hook (useRazorpay)
+  - Secure signature verification
+  - Payment logging and audit trail
+
+✅ DEPLOYMENT
+  - Production URL: https://mgm-museum-7tyhaq794-shivam-s-projects-fd1d92c1.vercel.app
+  - GitHub: Connected and auto-deploying
+  - Database: Supabase with all migrations applied
+  - Environment variables: Template ready
+
+================================================================================
+SETUP STEPS - RAZORPAY CONFIGURATION
+================================================================================
+
+STEP 1: GET RAZORPAY CREDENTIALS
+---------------------------------
+1. Go to: https://dashboard.razorpay.com/
+2. Sign up or log in
+3. Navigate to Settings > API Keys
+4. Generate API Keys (Test Mode for development)
+5. Copy:
+   - Key ID (starts with rzp_test_ or rzp_live_)
+   - Key Secret (keep this secure!)
+
+STEP 2: CONFIGURE WEBHOOK
+--------------------------
+1. In Razorpay Dashboard, go to Settings > Webhooks
+2. Click "Add New Webhook"
+3. Enter Webhook URL:
+   https://mgm-museum-7tyhaq794-shivam-s-projects-fd1d92c1.vercel.app/api/webhooks/razorpay
+4. Select Events:
+   ☑ payment.captured
+   ☑ payment.failed
+   ☑ order.paid
+   ☑ refund.created
+   ☑ refund.processed
+   ☑ refund.failed
+5. Set "Active" status
+6. Save and copy the "Webhook Secret"
+
+STEP 3: ADD ENVIRONMENT VARIABLES IN VERCEL
+--------------------------------------------
+1. Go to: https://vercel.com/shivam-s-projects-fd1d92c1/mgm-museum/settings/environment-variables
+2. Add these variables:
+
+   NEXT_PUBLIC_RAZORPAY_KEY_ID=rzp_test_XXXXXXXXXXXXXXXX
+   RAZORPAY_KEY_SECRET=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+   RAZORPAY_WEBHOOK_SECRET=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+3. Set Environment: Production, Preview, Development (select all)
+4. Click "Save"
+5. Redeploy from Deployments tab
+
+STEP 4: TEST PAYMENT FLOW
+--------------------------
+1. Go to your booking page
+2. Select exhibitions/shows/events
+3. Fill customer details
+4. Click "Proceed to Payment"
+5. Use Razorpay test cards:
+   - Success: 4111 1111 1111 1111
+   - CVV: Any 3 digits
+   - Expiry: Any future date
+   - OTP: 123456
+6. Verify booking status changes to "confirmed"
+7. Check payment_logs table in Supabase
+
+================================================================================
+TESTING CHECKLIST
+================================================================================
+
+ADMIN PANEL TESTS:
+☐ Create a new show with pricing and time slots
+☐ Edit an existing show
+☐ Delete a show
+☐ Create a new event
+☐ Update event status
+☐ Delete an event
+☐ Create a new exhibition
+☐ Toggle featured status
+☐ Delete an exhibition
+☐ Export analytics report as CSV
+☐ Export analytics report as JSON
+
+PAYMENT FLOW TESTS:
+☐ Create booking and initiate payment
+☐ Complete payment successfully
+☐ Verify booking status = confirmed
+☐ Check payment_logs table for entries
+☐ Cancel payment (test ondismiss)
+☐ Test payment failure scenario
+☐ Test webhook signature verification
+☐ Test duplicate payment prevention
+☐ Test refund creation (admin panel)
+
+INTEGRATION TESTS:
+☐ Create booking via API
+☐ Verify Razorpay order creation
+☐ Verify payment signature
+☐ Check webhook events processing
+☐ Verify email notifications (Phase 2)
+
+================================================================================
+API ENDPOINTS REFERENCE
+================================================================================
+
+BOOKINGS:
+POST /api/bookings/create-order
+  - Creates booking and Razorpay order
+  - Body: { items, customerName, customerEmail, customerPhone, visitDate, timeSlot }
+  - Returns: { booking, razorpayOrder }
+
+PAYMENTS:
+POST /api/payments/verify
+  - Verifies payment signature
+  - Body: { razorpay_order_id, razorpay_payment_id, razorpay_signature, booking_id }
+  - Returns: { success, booking }
+
+WEBHOOKS:
+POST /api/webhooks/razorpay
+  - Handles Razorpay webhook events
+  - Requires valid signature in header
+  - Processes: payment.captured, payment.failed, refund.processed, etc.
+
+ADMIN - SHOWS:
+GET /api/admin/shows
+POST /api/admin/shows
+PUT /api/admin/shows/[id]
+DELETE /api/admin/shows/[id]
+
+ADMIN - EVENTS:
+GET /api/admin/events
+POST /api/admin/events
+PUT /api/admin/events/[id]
+DELETE /api/admin/events/[id]
+
+ADMIN - EXHIBITIONS:
+GET /api/admin/exhibitions
+POST /api/admin/exhibitions
+PUT /api/admin/exhibitions/[id]
+DELETE /api/admin/exhibitions/[id]
+
+ADMIN - REPORTS:
+GET /api/admin/reports/export?type=bookings&format=csv&startDate=...&endDate=...
+
+================================================================================
+FRONTEND USAGE - RAZORPAY HOOK
+================================================================================
+
+import { useRazorpay } from '@/lib/hooks/use-razorpay';
+
+function BookingPage() {
+  const { isLoaded, isProcessing, initiatePayment } = useRazorpay();
+
+  const handlePayment = () => {
+    const bookingData = {
+      items: [
+        { type: 'exhibition', id: 'xxx', quantity: 2, ticketType: 'adult' }
+      ],
+      customerName: 'John Doe',
+      customerEmail: 'john@example.com',
+      customerPhone: '9876543210',
+      visitDate: '2025-11-01',
+      timeSlot: '10:00-11:00',
+      specialRequests: 'Wheelchair access'
+    };
+
+    initiatePayment(
+      bookingData,
+      (response) => {
+        // Success - redirect to confirmation page
+        router.push(`/booking/confirmation/${response.booking.id}`);
+      },
+      () => {
+        // Failure - show error
+        toast.error('Payment failed. Please try again.');
+      }
+    );
+  };
+
+  return (
+    <button 
+      onClick={handlePayment}
+      disabled={!isLoaded || isProcessing}
+    >
+      {isProcessing ? 'Processing...' : 'Pay Now'}
+    </button>
+  );
+}
+
+================================================================================
+DATABASE SCHEMA - PAYMENT FIELDS
+================================================================================
+
+bookings table:
+- razorpay_order_id (TEXT) - Razorpay order identifier
+- razorpay_payment_id (TEXT) - Razorpay payment identifier
+- razorpay_signature (TEXT) - Payment signature for verification
+- payment_method (TEXT) - card/upi/netbanking/wallet
+- payment_status (ENUM) - pending/completed/failed/refunded
+- amount_paid (INTEGER) - Amount in paise
+- payment_timestamp (TIMESTAMPTZ) - When payment completed
+- refund_id (TEXT) - Razorpay refund identifier
+- refund_amount (INTEGER) - Refund amount in paise
+- refund_status (TEXT) - Refund status
+
+payment_logs table:
+- id (UUID) - Primary key
+- booking_id (UUID) - Foreign key to bookings
+- event_type (TEXT) - Event name from Razorpay
+- razorpay_event_id (TEXT) - Event identifier
+- payload (JSONB) - Full event payload
+- created_at (TIMESTAMPTZ) - Timestamp
+
+================================================================================
+SECURITY BEST PRACTICES
+================================================================================
+
+✅ IMPLEMENTED:
+  - Webhook signature verification
+  - Payment signature verification
+  - Server-side amount validation
+  - Secure API key storage in env variables
+  - HTTPS only for production
+  - RLS policies on payment_logs table
+  - Audit trail for all payment events
+
+⚠️ RECOMMENDATIONS:
+  - Enable rate limiting on payment endpoints
+  - Set up monitoring for failed payments
+  - Configure Sentry for error tracking
+  - Set up automated backups for payment_logs
+  - Review Razorpay dashboard regularly
+  - Keep webhook secret rotation schedule
+  - Monitor for duplicate payment attempts
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+ISSUE: Payment modal not opening
+FIX: Check browser console for Razorpay script load errors
+     Verify NEXT_PUBLIC_RAZORPAY_KEY_ID is set correctly
+
+ISSUE: Payment verification fails
+FIX: Check webhook signature in Vercel logs
+     Verify RAZORPAY_KEY_SECRET matches dashboard
+     Check booking_id is valid
+
+ISSUE: Webhook not receiving events
+FIX: Verify webhook URL in Razorpay dashboard
+     Check Vercel function logs
+     Ensure webhook secret is correct
+     Test with Razorpay webhook tester
+
+ISSUE: Database connection fails
+FIX: Verify Supabase credentials in env variables
+     Check service role key has correct permissions
+     Review Supabase logs for connection errors
+
+================================================================================
+NEXT STEPS (PHASE 2)
+================================================================================
+
+READY TO IMPLEMENT:
+1. Email Notifications
+   - Booking confirmation with QR code
+   - Payment receipt with PDF ticket
+   - Payment retry links
+   - Refund confirmations
+
+2. PDF Ticket Generation
+   - QR code with booking reference
+   - Ticket details and terms
+   - Downloadable from confirmation page
+
+3. Admin Refund Interface
+   - Refund button in booking details
+   - Partial refund support
+   - Refund tracking dashboard
+
+4. Payment Retry
+   - Resend payment links via email
+   - Payment status tracking page
+   - Auto-cancel after timeout
+
+5. Analytics Dashboard
+   - Payment success rate metrics
+   - Revenue tracking
+   - Failed payment analysis
+   - Export payment reports
+
+================================================================================
+SUPPORT & RESOURCES
+================================================================================
+
+RAZORPAY DOCUMENTATION:
+- API Reference: https://razorpay.com/docs/api/
+- Checkout Guide: https://razorpay.com/docs/payments/payment-gateway/web-integration/standard/
+- Webhooks: https://razorpay.com/docs/webhooks/
+- Test Cards: https://razorpay.com/docs/payments/payments/test-card-details/
+
+SUPABASE:
+- Dashboard: https://supabase.com/dashboard/project/mlljzwuflbbquttejvuq
+- Docs: https://supabase.com/docs
+
+VERCEL:
+- Dashboard: https://vercel.com/shivam-s-projects-fd1d92c1/mgm-museum
+- Docs: https://vercel.com/docs
+
+PROJECT REPOSITORY:
+- GitHub: https://github.com/SProjects-cpu/mgm-museum
+
+================================================================================
+END OF SETUP INSTRUCTIONS
+================================================================================
