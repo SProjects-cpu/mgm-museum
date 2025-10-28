@@ -96,28 +96,21 @@ export async function PUT(
     }
 
     // Update event
-    const updateData: any = {
-      title,
-      slug,
-      description,
-      event_date: eventDate,
-      start_time: startTime,
-      end_time: endTime,
-      location,
-      max_participants: maxParticipants,
-      registration_required: registrationRequired,
-      featured_image: featuredImage,
-      status,
-    };
-
-    // Only add booking_enabled if provided
-    if (bookingEnabled !== undefined) {
-      updateData.booking_enabled = bookingEnabled;
-    }
-
     const { data: event, error } = await supabase
       .from('events')
-      .update(updateData)
+      .update({
+        title,
+        slug,
+        description,
+        event_date: eventDate,
+        start_time: startTime,
+        end_time: endTime,
+        location,
+        max_participants: maxParticipants,
+        registration_required: registrationRequired,
+        featured_image: featuredImage,
+        status
+      })
       .eq('id', id as any)
       .select()
       .single();

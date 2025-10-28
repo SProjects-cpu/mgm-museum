@@ -77,8 +77,7 @@ export function EventDialog({ mode = "create", event, trigger, onSuccess }: Even
         maxParticipants: formData.maxParticipants,
         registrationRequired: formData.registrationRequired,
         featuredImage: formData.featuredImage || null,
-        status: formData.status,
-        bookingEnabled: formData.bookingEnabled,
+        status: formData.status
       };
 
       const url = mode === "create" 
