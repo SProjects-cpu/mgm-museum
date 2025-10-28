@@ -53,6 +53,37 @@ export default function PaymentSettingsPage() {
     }
   };
 
+  const handleTestConnection = async () => {
+    if (!formData.keyId || !formData.keySecret) {
+      toast.error("Key ID and Secret are required to test");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const response = await fetch("/api/admin/payment-settings/test-connection", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          keyId: formData.keyId,
+          keySecret: formData.keySecret
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        toast.success(`✅ ${data.message}`);
+      } else {
+        toast.error(data.error || "Connection test failed");
+      }
+    } catch (error) {
+      toast.error("Failed to test connection");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const handleSaveCredentials = async () => {
     if (!formData.keyId || !formData.keySecret || !formData.webhookSecret) {
       toast.error("All fields are required");
@@ -152,6 +183,9 @@ export default function PaymentSettingsPage() {
             <Button onClick={() => setShowSecrets(!showSecrets)} variant="outline">
               {showSecrets ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
               {showSecrets ? "Hide" : "Show"} Secrets
+            </Button>
+            <Button onClick={handleTestConnection} disabled={saving} variant="secondary">
+              🔗 Test Connection
             </Button>
             <Button onClick={handleSaveCredentials} disabled={saving}>
               <Save className="w-4 h-4 mr-2" />
