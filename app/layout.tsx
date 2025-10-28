@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 import { ConditionalNavbar } from "@/components/layout/conditional-navbar";
@@ -100,6 +101,11 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <Script 
+          src="https://t.contentsquare.net/uxa/81e2a81131983.js" 
+          strategy="beforeInteractive"
+          async
+        />
       </head>
       <body
         className={`${inter.variable} ${spaceGrotesk.variable} antialiased`}
