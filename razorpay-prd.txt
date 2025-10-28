@@ -1,0 +1,278 @@
+================================================================================
+RAZORPAY PAYMENT INTEGRATION - PRODUCT REQUIREMENTS DOCUMENT
+MGM Museum Booking System
+================================================================================
+
+EXECUTIVE SUMMARY
+-----------------
+Complete payment gateway integration using Razorpay for booking tickets to
+exhibitions, shows, and events with proper order management, payment verification,
+and webhook handling.
+
+VERIFIED RAZORPAY MCP CAPABILITIES
+----------------------------------
+✅ Create payment orders (mcp3_create_order)
+✅ Initiate payments (mcp3_initiate_payment)
+✅ Create payment links (mcp3_create_payment_link)
+✅ Fetch payments (mcp3_fetch_payment)
+✅ Fetch orders (mcp3_fetch_order)
+✅ Resend payment links (mcp3_payment_link_notify)
+✅ Capture payments (mcp3_capture_payment)
+✅ Create refunds (via API)
+
+PAYMENT FLOW ARCHITECTURE
+--------------------------
+
+1. ORDER CREATION FLOW
+   User Journey:
+   - User selects tickets (exhibitions/shows/events)
+   - Fills booking form with contact details
+   - Reviews order summary
+   - Clicks "Proceed to Payment"
+   
+   Backend Process:
+   - Validate ticket availability
+   - Calculate total amount (base price + taxes)
+   - Create booking record (status: pending)
+   - Create Razorpay order via MCP
+   - Store order ID in booking
+   - Return order details to frontend
+
+2. PAYMENT INITIATION FLOW
+   Frontend:
+   - Load Razorpay Checkout SDK
+   - Initialize with order_id, key, amount
+   - Display Razorpay payment modal
+   - User completes payment
+   
+   Backend Verification:
+   - Webhook receives payment.captured event
+   - Verify payment signature
+   - Update booking status: confirmed
+   - Send confirmation email with QR code
+   - Generate PDF ticket
+
+3. PAYMENT VERIFICATION FLOW
+   Server-Side:
+   - Receive webhook from Razorpay
+   - Verify webhook signature using secret
+   - Extract payment_id, order_id, signature
+   - Validate signature: sha256(order_id|payment_id, secret)
+   - Fetch payment details via MCP
+   - Update database based on status
+   - Send notifications
+
+4. FAILURE HANDLING FLOW
+   - Payment failed: Update booking status
+   - Payment pending: Set timeout for auto-cancellation
+   - Send payment retry link via email
+   - Allow manual retry from booking details page
+
+5. REFUND FLOW
+   Admin Action:
+   - Admin initiates refund from admin panel
+   - Create refund via Razorpay API
+   - Update booking status: refunded
+   - Send refund confirmation email
+   - Track refund status via webhook
+
+API ENDPOINTS REQUIRED
+----------------------
+
+1. POST /api/bookings/create
+   - Validate booking data
+   - Check availability
+   - Create Razorpay order
+   - Create booking record
+   - Return order details
+
+2. POST /api/payments/verify
+   - Verify payment signature
+   - Update booking status
+   - Trigger email notifications
+   - Generate tickets
+
+3. POST /api/webhooks/razorpay
+   - Verify webhook signature
+   - Process payment events
+   - Update booking status
+   - Handle failures
+
+4. GET /api/bookings/[id]/status
+   - Check booking payment status
+   - Return payment details
+   - Allow payment retry
+
+5. POST /api/payments/retry
+   - Create new payment link
+   - Send via email/SMS
+   - Update booking
+
+6. POST /api/admin/refunds/create
+   - Admin only endpoint
+   - Create refund
+   - Update status
+   - Send notification
+
+DATABASE SCHEMA UPDATES
+-----------------------
+
+bookings table:
+- razorpay_order_id (TEXT)
+- razorpay_payment_id (TEXT)
+- razorpay_signature (TEXT)
+- payment_method (TEXT) - card/upi/netbanking/wallet
+- payment_status (ENUM) - pending/completed/failed/refunded
+- amount_paid (INTEGER) - in paise
+- payment_timestamp (TIMESTAMP)
+- refund_id (TEXT)
+- refund_amount (INTEGER)
+- refund_status (TEXT)
+
+payment_logs table (NEW):
+- id (UUID PRIMARY KEY)
+- booking_id (UUID FOREIGN KEY)
+- event_type (TEXT) - order.paid, payment.failed, refund.processed
+- razorpay_event_id (TEXT)
+- payload (JSONB)
+- created_at (TIMESTAMP)
+
+ENVIRONMENT VARIABLES
+---------------------
+RAZORPAY_KEY_ID=rzp_live_xxx (from Razorpay Dashboard)
+RAZORPAY_KEY_SECRET=xxx (from Razorpay Dashboard)
+RAZORPAY_WEBHOOK_SECRET=xxx (from Razorpay Webhook Settings)
+NEXT_PUBLIC_RAZORPAY_KEY_ID=rzp_live_xxx (Frontend)
+
+RAZORPAY CHECKOUT CONFIGURATION
+--------------------------------
+{
+  key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+  amount: orderAmount, // in paise
+  currency: "INR",
+  name: "MGM Museum",
+  description: "Ticket Booking",
+  image: "/logo.png",
+  order_id: razorpayOrderId,
+  prefill: {
+    name: customerName,
+    email: customerEmail,
+    contact: customerPhone
+  },
+  theme: {
+    color: "#3b82f6"
+  },
+  handler: async (response) => {
+    // Verify payment on backend
+    await verifyPayment(response);
+  },
+  modal: {
+    ondismiss: () => {
+      // Handle payment cancellation
+    }
+  }
+}
+
+WEBHOOK EVENTS TO HANDLE
+-------------------------
+1. payment.captured - Payment successful
+2. payment.failed - Payment failed
+3. order.paid - Order fully paid
+4. refund.created - Refund initiated
+5. refund.processed - Refund completed
+6. refund.failed - Refund failed
+
+SECURITY MEASURES
+-----------------
+1. Verify webhook signature on every request
+2. Use HTTPS only
+3. Store API keys in environment variables
+4. Validate payment amounts server-side
+5. Implement rate limiting on payment endpoints
+6. Log all payment transactions
+7. Use idempotency keys for retries
+8. Sanitize all user inputs
+
+ERROR HANDLING
+--------------
+1. Network failures: Retry with exponential backoff
+2. Payment timeout: Auto-cancel after 15 minutes
+3. Duplicate payments: Check order_id before processing
+4. Webhook replay: Store processed event IDs
+5. Amount mismatch: Reject and notify admin
+6. Invalid signature: Reject and log
+
+TESTING STRATEGY
+----------------
+1. Use Razorpay Test Mode for development
+2. Test payment scenarios:
+   - Successful payment
+   - Failed payment
+   - Pending payment
+   - Payment timeout
+   - Duplicate payment attempt
+3. Test webhook handling with test events
+4. Test refund flow
+5. Load testing for concurrent bookings
+
+MONITORING & ANALYTICS
+----------------------
+1. Track payment success rate
+2. Monitor failed payment reasons
+3. Track average payment completion time
+4. Alert on webhook failures
+5. Dashboard for payment analytics
+6. Export payment reports
+
+IMPLEMENTATION PHASES
+---------------------
+
+PHASE 1: Core Payment Integration (HIGH PRIORITY)
+- Create order endpoint
+- Payment verification endpoint
+- Basic webhook handler
+- Database schema updates
+- Frontend Razorpay Checkout integration
+
+PHASE 2: Enhanced Features
+- Payment retry functionality
+- Email notifications with payment links
+- Admin refund interface
+- Payment status tracking page
+
+PHASE 3: Advanced Features
+- Payment analytics dashboard
+- Automated refund workflows
+- Payment reminder emails
+- Multiple payment method support
+
+PHASE 4: Optimization
+- Performance optimization
+- Webhook reliability improvements
+- Advanced fraud detection
+- Payment reconciliation reports
+
+SUCCESS CRITERIA
+----------------
+✅ 100% payment verification accuracy
+✅ < 2 second order creation time
+✅ 99.9% webhook processing success
+✅ Zero duplicate payments
+✅ Comprehensive payment logs
+✅ Automated email notifications
+✅ Admin refund capability
+✅ Real-time payment status updates
+
+ROLLBACK PLAN
+-------------
+If issues occur:
+1. Disable payment gateway temporarily
+2. Show "Coming Soon" message
+3. Enable email-based booking requests
+4. Revert to previous stable version
+5. Fix issues in staging
+6. Gradual rollout with monitoring
+
+================================================================================
+END OF DOCUMENT
+================================================================================
