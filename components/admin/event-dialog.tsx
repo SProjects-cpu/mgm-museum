@@ -110,7 +110,6 @@ export function EventDialog({ mode = "create", event, trigger, onSuccess }: Even
             registrationRequired: true,
             featuredImage: "",
             status: "upcoming",
-            bookingEnabled: true,
           });
           setDate(undefined);
         }
@@ -300,16 +299,6 @@ export function EventDialog({ mode = "create", event, trigger, onSuccess }: Even
                   }
                 />
                 Registration Required
-              </Label>
-              <Label className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  checked={formData.bookingEnabled}
-                  onChange={(e) =>
-                    setFormData({ ...formData, bookingEnabled: e.target.checked })
-                  }
-                />
-                Booking Enabled
               </Label>
             </div>
           </div>

@@ -79,10 +79,17 @@ export default function EventsManagement() {
 
   const handleToggleBooking = async (eventId: string, currentStatus: boolean) => {
     try {
+      // Find the event to get its current status
+      const event = events.find(e => e.id === eventId);
+      if (!event) return;
+
+      // Toggle between upcoming and cancelled
+      const newStatus = event.status === 'cancelled' ? 'upcoming' : 'cancelled';
+
       const response = await fetch(`/api/admin/events/${eventId}/toggle-booking`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bookingEnabled: !currentStatus })
+        body: JSON.stringify({ status: newStatus })
       });
 
       const data = await response.json();
@@ -91,11 +98,11 @@ export default function EventsManagement() {
         toast.success(data.message);
         fetchEvents(); // Refresh the list
       } else {
-        toast.error(data.error || 'Failed to update booking status');
+        toast.error(data.error || 'Failed to update event status');
       }
     } catch (error) {
       console.error('Error toggling booking:', error);
-      toast.error('Failed to update booking status');
+      toast.error('Failed to update event status');
     }
   };
 
