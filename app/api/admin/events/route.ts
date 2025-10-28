@@ -136,22 +136,28 @@ export async function POST(request: NextRequest) {
     }
 
     // Create event
+    const eventData: any = {
+      title,
+      slug,
+      description,
+      event_date: eventDate,
+      start_time: startTime,
+      end_time: endTime,
+      location,
+      max_participants: maxParticipants,
+      registration_required: registrationRequired,
+      featured_image: featuredImage,
+      status,
+    };
+
+    // Only add booking_enabled if provided
+    if (bookingEnabled !== undefined) {
+      eventData.booking_enabled = bookingEnabled;
+    }
+
     const { data: event, error } = await supabase
       .from('events')
-      .insert({
-        title,
-        slug,
-        description,
-        event_date: eventDate,
-        start_time: startTime,
-        end_time: endTime,
-        location,
-        max_participants: maxParticipants,
-        registration_required: registrationRequired,
-        featured_image: featuredImage,
-        status,
-        booking_enabled: bookingEnabled
-      } as any)
+      .insert(eventData)
       .select()
       .single();
 
