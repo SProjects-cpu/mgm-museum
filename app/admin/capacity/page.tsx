@@ -41,7 +41,7 @@ export default function AdminCapacityPage() {
         .order('override_date');
 
       if (!error && data) {
-        setOverrides(data);
+        setOverrides(data as any);
       }
     } catch (error) {
       console.error('Error fetching overrides:', error);
