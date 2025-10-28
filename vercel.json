@@ -2,6 +2,9 @@
   "framework": "nextjs",
   "buildCommand": "npm run build",
   "outputDirectory": ".next",
+  "env": {
+    "DATABASE_ENCRYPTION_KEY": "@database_encryption_key"
+  },
   "functions": {
     "app/api/**/*.ts": {
       "maxDuration": 60
