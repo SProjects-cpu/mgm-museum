@@ -60,10 +60,16 @@ export async function GET(request: NextRequest) {
       .order('slot_date')
       .order('start_time');
 
-    if (exhibitionId) {
+    // Validate UUID format before using in query
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    
+    if (exhibitionId && uuidRegex.test(exhibitionId)) {
       query = query.eq('exhibition_id', exhibitionId);
-    } else if (showId) {
+    } else if (showId && uuidRegex.test(showId)) {
       query = query.eq('show_id', showId);
+    } else if (!exhibitionId && !showId) {
+      // If no valid exhibition or show ID, get general admission slots
+      query = query.is('exhibition_id', null).is('show_id', null);
     }
 
     const { data: timeSlots, error: slotsError } = await query;
