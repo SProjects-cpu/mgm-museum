@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase/config';
 import { verifyPaymentSignature, fetchPaymentDetails } from '@/lib/razorpay/client';
+import crypto from 'crypto';
 
 export async function POST(request: NextRequest) {
   try {
@@ -75,19 +76,18 @@ export async function POST(request: NextRequest) {
     // Fetch payment details from Razorpay
     const paymentDetails = await fetchPaymentDetails(razorpay_payment_id);
 
-    // Update booking with payment details
+    // Update booking status
     const { error: updateError } = await supabase
       .from('bookings')
       .update({
-        razorpay_payment_id,
-        razorpay_signature,
-        payment_status: 'completed',
-        booking_status: 'confirmed',
+        payment_status: 'paid',
+        status: 'confirmed',
+        razorpay_payment_id: razorpay_payment_id,
         payment_method: paymentDetails.method,
-        amount_paid: paymentDetails.amount,
-        payment_timestamp: new Date(paymentDetails.created_at * 1000).toISOString()
+        paid_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       })
-      .eq('id', booking.id);
+      .eq('razorpay_order_id', razorpay_order_id);
 
     if (updateError) {
       console.error('Error updating booking:', updateError);
@@ -96,6 +96,23 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Get booking details for ticket generation
+    const { data: bookings } = await supabase
+      .from('bookings')
+      .select('id, booking_reference')
+      .eq('razorpay_order_id', razorpayOrderId);
+
+    // Trigger ticket generation for each booking
+    const ticketPromises = bookings?.map(booking => 
+      fetch(`${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/api/tickets/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId: booking.id })
+      })
+    ) || [];
+
+    await Promise.allSettled(ticketPromises);
 
     // Log successful payment
     await supabase
