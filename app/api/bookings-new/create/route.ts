@@ -58,6 +58,9 @@ export async function POST(request: NextRequest) {
 
     const bookingReference = refData;
 
+    // Ensure total_amount is a number (required field)
+    const totalAmount = parseFloat(body.totalAmount) || 0;
+    
     // Create booking
     const { data: booking, error: bookingError } = await supabase
       .from('bookings')
@@ -74,12 +77,12 @@ export async function POST(request: NextRequest) {
         student_tickets: body.studentTickets || 0,
         senior_tickets: body.seniorTickets || 0,
         total_tickets: body.totalTickets,
-        subtotal: body.subtotal || 0,
-        discount: body.discount || 0,
-        total_amount: body.totalAmount || 0,
+        subtotal: parseFloat(body.subtotal) || 0,
+        discount: parseFloat(body.discount) || 0,
+        total_amount: totalAmount,
         voucher_code: body.voucherCode || null,
         status: 'confirmed',
-        payment_status: body.totalAmount > 0 ? 'pending' : 'free',
+        payment_status: totalAmount > 0 ? 'pending' : 'free',
         special_requirements: body.specialRequirements || null,
         accessibility_requirements: body.accessibilityRequirements || null,
         booking_date: body.bookingDate
@@ -89,8 +92,18 @@ export async function POST(request: NextRequest) {
 
     if (bookingError || !booking) {
       console.error('Error creating booking:', bookingError);
+      console.error('Booking data attempted:', {
+        booking_reference: bookingReference,
+        time_slot_id: body.timeSlotId,
+        total_amount: totalAmount,
+        booking_date: body.bookingDate
+      });
       return NextResponse.json(
-        { error: 'Failed to create booking' },
+        { 
+          error: 'Failed to create booking',
+          details: bookingError?.message || 'Unknown error',
+          code: bookingError?.code
+        },
         { status: 500 }
       );
     }
