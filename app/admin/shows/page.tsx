@@ -24,6 +24,8 @@ export default function ShowsManagement() {
   const [shows, setShows] = useState<Show[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  console.log('Shows Management - Rendering with', shows.length, 'shows');
 
   const fetchShows = async () => {
     try {
