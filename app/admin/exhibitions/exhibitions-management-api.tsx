@@ -247,8 +247,8 @@ export function ExhibitionsManagement() {
                     onClick={() => window.location.href = `/admin/exhibitions/${exhibition.id}`}
                     className="flex-1"
                   >
-                    <Eye className="w-4 h-4 mr-2" />
-                    Manage
+                    <Edit className="w-4 h-4 mr-2" />
+                    Edit
                   </Button>
                   <Button
                     variant="ghost"

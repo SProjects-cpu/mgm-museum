@@ -78,7 +78,6 @@ export default function ShowsManagement() {
           <h1 className="text-3xl font-extrabold mb-2 bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70 mt-6">Shows Management</h1>
           <p className="text-muted-foreground">Manage planetarium shows and schedules</p>
         </div>
-        <ShowDialog mode="create" onSuccess={fetchShows} />
       </div>
 
       {error && (
