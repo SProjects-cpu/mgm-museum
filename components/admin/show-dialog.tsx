@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Loader2 } from "lucide-react";
+import { Plus, Loader2, Edit } from "lucide-react";
 import { toast } from "sonner";
 import { PricingManager } from "./pricing-manager";
 
@@ -95,7 +95,11 @@ export function ShowDialog({ mode = "create", show, trigger, onSuccess }: ShowDi
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {trigger || (
+        {trigger ? trigger : mode === "edit" ? (
+          <Button variant="ghost" size="icon" className="h-8 w-8">
+            <Edit className="w-4 h-4" />
+          </Button>
+        ) : (
           <Button className="gap-2">
             <Plus className="w-4 h-4" />
             Add Show
