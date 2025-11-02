@@ -31,7 +31,7 @@ import { toast } from "sonner";
 import { EXHIBITION_CATEGORY_LABELS } from "@/types";
 import { ExhibitionContentManager } from "@/components/admin/exhibition-content-manager";
 import { TimeSlotsManager } from "@/components/admin/time-slots-manager";
-import { PricingManager } from "@/components/admin/pricing-manager";
+import { PricingManagerWrapper } from "@/components/admin/pricing-manager-wrapper";
 
 interface Props {
   exhibitionId: string;
@@ -412,7 +412,7 @@ export function ExhibitionDetailManagement({ exhibitionId }: Props) {
 
         {/* Pricing Tab */}
         <TabsContent value="pricing">
-          <PricingManager exhibitionId={exhibitionId} type="exhibition" />
+          <PricingManagerWrapper exhibitionId={exhibitionId} />
         </TabsContent>
 
         {/* Schedule Tab */}
