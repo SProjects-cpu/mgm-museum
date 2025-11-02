@@ -24,6 +24,7 @@ import {
 import { Plus, Loader2, Edit } from "lucide-react";
 import { toast } from "sonner";
 import { PricingManager } from "./pricing-manager";
+import { FileUpload } from "./file-upload";
 
 interface ShowDialogProps {
   mode?: "create" | "edit";
@@ -198,15 +199,27 @@ export function ShowDialog({ mode = "create", show, trigger, onSuccess }: ShowDi
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="show-thumbnail">Thumbnail URL</Label>
-              <Input
-                id="show-thumbnail"
-                value={formData.thumbnailUrl}
-                onChange={(e) =>
-                  setFormData({ ...formData, thumbnailUrl: e.target.value })
-                }
-                placeholder="https://..."
+              <Label>Thumbnail Image</Label>
+              <FileUpload
+                bucket="show-images"
+                entityId={show?.id || 'new'}
+                onUploadComplete={(url) => {
+                  setFormData({ ...formData, thumbnailUrl: url });
+                }}
+                label="Upload Thumbnail"
+                description="Upload thumbnail from your computer (JPEG, PNG, or WebP, max 5MB)"
               />
+              <div className="mt-2">
+                <Label htmlFor="show-thumbnail">Or enter URL manually</Label>
+                <Input
+                  id="show-thumbnail"
+                  value={formData.thumbnailUrl}
+                  onChange={(e) =>
+                    setFormData({ ...formData, thumbnailUrl: e.target.value })
+                  }
+                  placeholder="https://..."
+                />
+              </div>
             </div>
           </div>
 

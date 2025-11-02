@@ -32,6 +32,8 @@ import { EXHIBITION_CATEGORY_LABELS } from "@/types";
 import { ExhibitionContentManager } from "@/components/admin/exhibition-content-manager";
 import { TimeSlotsManager } from "@/components/admin/time-slots-manager";
 import { PricingManagerWrapper } from "@/components/admin/pricing-manager-wrapper";
+import { ScheduleManager } from "@/components/admin/schedule-manager";
+import { FileUpload } from "@/components/admin/file-upload";
 
 interface Props {
   exhibitionId: string;
@@ -318,7 +320,19 @@ export function ExhibitionDetailManagement({ exhibitionId }: Props) {
 
               <div className="space-y-2">
                 <Label>Images</Label>
-                <div className="grid grid-cols-3 gap-4">
+                <FileUpload
+                  bucket="exhibition-images"
+                  entityId={exhibitionId}
+                  onUploadComplete={(url) => {
+                    setFormData({
+                      ...formData,
+                      images: [...formData.images, url],
+                    });
+                  }}
+                  label="Upload New Image"
+                  description="Upload images from your computer (JPEG, PNG, or WebP, max 5MB)"
+                />
+                <div className="grid grid-cols-3 gap-4 mt-4">
                   {formData.images.map((img, index) => (
                     <div key={index} className="relative group">
                       <img
@@ -342,7 +356,7 @@ export function ExhibitionDetailManagement({ exhibitionId }: Props) {
                     onClick={addImage}
                   >
                     <ImageIcon className="w-6 h-6 mr-2" />
-                    Add Image
+                    Add Image URL
                   </Button>
                 </div>
               </div>
@@ -417,22 +431,7 @@ export function ExhibitionDetailManagement({ exhibitionId }: Props) {
 
         {/* Schedule Tab */}
         <TabsContent value="schedule">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Calendar className="w-5 h-5" />
-                Schedule Management
-              </CardTitle>
-              <p className="text-sm text-muted-foreground">
-                Configure date-specific availability and capacity
-              </p>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">
-                Schedule management coming soon...
-              </p>
-            </CardContent>
-          </Card>
+          <ScheduleManager exhibitionId={exhibitionId} />
         </TabsContent>
       </Tabs>
     </div>
