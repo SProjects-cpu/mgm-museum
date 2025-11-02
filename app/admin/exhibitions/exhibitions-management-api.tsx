@@ -242,24 +242,21 @@ export function ExhibitionsManagement() {
 
                 <div className="flex gap-2 mt-4 pt-4 border-t">
                   <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.location.href = `/admin/exhibitions/${exhibition.id}`}
+                    className="flex-1"
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    Manage
+                  </Button>
+                  <Button
                     variant="ghost"
                     size="sm"
                     onClick={() => handleToggleFeatured(exhibition.id, exhibition.is_featured)}
-                    className="flex-1"
                   >
-                    <Star className="w-4 h-4 mr-2" />
-                    {exhibition.is_featured ? 'Unfeature' : 'Feature'}
+                    <Star className="w-4 h-4" />
                   </Button>
-                  <ExhibitionDialog 
-                    mode="edit" 
-                    exhibition={exhibition} 
-                    onSuccess={fetchExhibitions}
-                    trigger={
-                      <Button variant="ghost" size="sm">
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                    }
-                  />
                   <Button
                     variant="ghost"
                     size="sm"

@@ -1,0 +1,241 @@
+{
+  "projectName": "MGM Museum",
+  "projectDescription": "MGM APJ Abdul Kalam Astrospace Science Centre - A modern, interactive web application for booking exhibitions, planetarium shows, and managing science centre operations",
+  "techStack": {
+    "frontend": {
+      "framework": "Next.js 15.5.4",
+      "runtime": "React 19.1.0",
+      "language": "TypeScript 5",
+      "styling": "Tailwind CSS v4",
+      "uiLibrary": "shadcn/ui with Radix UI primitives",
+      "stateManagement": "Zustand",
+      "forms": "React Hook Form with Zod validation",
+      "animations": ["Framer Motion", "GSAP", "React Three Fiber"],
+      "charts": "Recharts",
+      "icons": "Lucide React"
+    },
+    "backend": {
+      "api": "GraphQL with Apollo Client and GraphQL Yoga",
+      "database": "Supabase (PostgreSQL)",
+      "auth": "Supabase Auth",
+      "storage": "Supabase Storage",
+      "email": "Resend",
+      "payments": "Razorpay",
+      "sms": "Twilio"
+    },
+    "deployment": {
+      "platform": "Vercel",
+      "pwa": true
+    }
+  },
+  "features": {
+    "visitor": [
+      {
+        "name": "Online Booking System",
+        "description": "Multi-step booking flow for exhibitions, planetarium shows, and events with date, time, and seat selection",
+        "routes": ["/exhibitions", "/shows", "/events"]
+      },
+      {
+        "name": "Interactive Galleries",
+        "description": "Browse 8 themed exhibitions with detailed information including Solar Observatory, Science Park, Planetarium, Astro Gallery, 3D Theatre, Math Lab, Physics Lab, and Holography",
+        "routes": ["/exhibitions", "/exhibitions/[slug]"]
+      },
+      {
+        "name": "Show Schedule",
+        "description": "View daily planetarium and theatre shows with timings and availability",
+        "routes": ["/shows"]
+      },
+      {
+        "name": "Plan Your Visit",
+        "description": "Opening hours, location, facilities, and FAQs for visitors",
+        "routes": ["/plan-visit"]
+      },
+      {
+        "name": "Photo Gallery",
+        "description": "Explore images from exhibitions and events",
+        "routes": ["/gallery"]
+      },
+      {
+        "name": "User Dashboard",
+        "description": "Manage bookings, view e-tickets, track booking history",
+        "routes": ["/dashboard"]
+      },
+      {
+        "name": "Contact Form",
+        "description": "Contact the museum with inquiries",
+        "routes": ["/contact"]
+      },
+      {
+        "name": "About Page",
+        "description": "Information about MGM APJ Abdul Kalam Astrospace Science Centre",
+        "routes": ["/about"]
+      }
+    ],
+    "admin": [
+      {
+        "name": "Analytics Dashboard",
+        "description": "Revenue, bookings, visitor trends with interactive charts and real-time metrics",
+        "routes": ["/admin"]
+      },
+      {
+        "name": "Content Management",
+        "description": "Manage exhibitions, shows, events, and gallery content",
+        "routes": ["/admin/exhibitions", "/admin/shows", "/admin/events", "/admin/gallery"]
+      },
+      {
+        "name": "Booking Management",
+        "description": "Real-time bookings, cancellations, and modifications with detailed views",
+        "routes": ["/admin/bookings"]
+      },
+      {
+        "name": "Pricing Control",
+        "description": "Dynamic pricing for different ticket types and seasons",
+        "routes": ["/admin/pricing"]
+      },
+      {
+        "name": "User Management",
+        "description": "View and manage registered users",
+        "routes": ["/admin/users"]
+      },
+      {
+        "name": "Settings Panel",
+        "description": "Configure site-wide settings and preferences",
+        "routes": ["/admin/settings"]
+      },
+      {
+        "name": "Reports",
+        "description": "Export booking and revenue reports",
+        "routes": ["/admin/reports"]
+      }
+    ]
+  },
+  "apiEndpoints": [
+    {
+      "path": "/api/graphql",
+      "method": "POST",
+      "description": "GraphQL API endpoint for all data operations"
+    },
+    {
+      "path": "/api/bookings",
+      "method": "POST",
+      "description": "Create new booking"
+    },
+    {
+      "path": "/api/bookings/[id]",
+      "method": "GET",
+      "description": "Get booking details"
+    },
+    {
+      "path": "/api/payments/create",
+      "method": "POST",
+      "description": "Create Razorpay payment order"
+    },
+    {
+      "path": "/api/payments/verify",
+      "method": "POST",
+      "description": "Verify Razorpay payment"
+    },
+    {
+      "path": "/api/tickets/generate",
+      "method": "POST",
+      "description": "Generate PDF tickets"
+    },
+    {
+      "path": "/api/admin/reports/daily-sales",
+      "method": "GET",
+      "description": "Get daily sales report"
+    }
+  ],
+  "keyComponents": {
+    "ui": [
+      "Button (8 variants)",
+      "Card",
+      "Badge",
+      "Dialog",
+      "Sheet",
+      "Input",
+      "Select",
+      "Checkbox",
+      "Radio",
+      "Switch",
+      "Table",
+      "Tabs",
+      "Accordion",
+      "Sidebar",
+      "Dropdown Menu",
+      "Toast",
+      "Alert",
+      "Charts (Area, Line, Bar, Pie, Donut)"
+    ],
+    "shared": [
+      "MuseumHero",
+      "QuickBooking",
+      "FeaturedExhibitions",
+      "StatsCounter",
+      "Testimonials",
+      "StructuredData"
+    ],
+    "admin": [
+      "AdminSidebar",
+      "AdminHeader",
+      "AdminStatsCards",
+      "AdminExhibitionsTable",
+      "DataTable"
+    ]
+  },
+  "dataModels": [
+    {
+      "name": "Exhibition",
+      "fields": ["id", "slug", "name", "category", "description", "durationMinutes", "capacity", "images", "status", "featured", "pricing"]
+    },
+    {
+      "name": "Show",
+      "fields": ["id", "slug", "name", "description", "type", "durationMinutes", "thumbnailUrl", "status", "pricing", "timeSlots"]
+    },
+    {
+      "name": "Booking",
+      "fields": ["id", "bookingReference", "userId", "exhibitionId", "showId", "bookingDate", "timeSlotId", "status", "paymentStatus", "totalAmount", "tickets", "seats"]
+    },
+    {
+      "name": "Event",
+      "fields": ["id", "title", "slug", "description", "eventDate", "startTime", "endTime", "location", "maxParticipants", "status", "registrations"]
+    },
+    {
+      "name": "User",
+      "fields": ["id", "email", "fullName", "phone", "role"]
+    }
+  ],
+  "authentication": {
+    "provider": "Supabase Auth",
+    "features": ["Email/Password", "Social Login", "Role-based Access Control"]
+  },
+  "testing": {
+    "type": "frontend",
+    "port": 3000,
+    "testablePages": [
+      "/",
+      "/exhibitions",
+      "/exhibitions/solar-observatory",
+      "/shows",
+      "/events",
+      "/gallery",
+      "/plan-visit",
+      "/about",
+      "/contact",
+      "/dashboard",
+      "/admin"
+    ]
+  },
+  "performance": {
+    "pwa": true,
+    "ssr": true,
+    "isr": true,
+    "lazyLoading": true,
+    "codeSplitting": true,
+    "imageOptimization": true
+  },
+  "accessibility": {
+    "wcag": "2.1 AA compliant",
+    "features": ["Keyboard navigation", "Screen reader support", "ARIA labels", "Focus management"]
+  }
+}
