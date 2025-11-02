@@ -109,7 +109,16 @@ export default function ShowsManagement() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <ShowDialog mode="edit" show={show} onSuccess={fetchShows} />
+                  <ShowDialog 
+                    mode="edit" 
+                    show={show} 
+                    onSuccess={fetchShows}
+                    trigger={
+                      <Button variant="ghost" size="icon" className="h-8 w-8">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    }
+                  />
                   <Button
                     variant="ghost"
                     size="icon"
