@@ -242,10 +242,12 @@ export function ExhibitionsManagement() {
 
                 <div className="flex gap-2 mt-4 pt-4 border-t">
                   <Button
+                    variant="outline"
+                    size="sm"
                     onClick={() => window.location.href = `/admin/exhibitions/${exhibition.id}`}
                     className="flex-1"
                   >
-                    <Edit className="w-4 h-4 mr-2" />
+                    <Eye className="w-4 h-4 mr-2" />
                     Manage
                   </Button>
                   <Button
