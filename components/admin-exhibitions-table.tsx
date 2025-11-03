@@ -28,7 +28,7 @@ import Link from "next/link";
 import { formatCurrency } from "@/lib/utils";
 import { EXHIBITION_CATEGORY_LABELS } from "@/types";
 import { toast } from "sonner";
-import { useRealtimeSync } from "@/lib/contexts/realtime-sync-context";
+// import { useRealtimeSync } from "@/lib/contexts/realtime-sync-context"; // DISABLED
 
 interface Exhibition {
   id: string;
@@ -55,7 +55,10 @@ export function AdminExhibitionsTable() {
   const [filterStatus, setFilterStatus] = useState("all");
   
   // Call hooks at top level - MUST be before any conditional returns or useEffect
-  const { isConnected, refreshData, subscribeToTable } = useRealtimeSync();
+  // const { isConnected, refreshData, subscribeToTable } = useRealtimeSync(); // DISABLED
+  const isConnected = false;
+  const refreshData = () => {};
+  const subscribeToTable = () => () => {};
 
   // Fetch exhibitions from API
   const fetchExhibitions = useCallback(async () => {
