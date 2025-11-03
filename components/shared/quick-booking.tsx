@@ -112,7 +112,7 @@ export function QuickBooking() {
                         </li>
                       ))}
                     </ul>
-                    {idx < museumFeatures.length - 1 && (
+                    {idx < featureGroups.length - 1 && (
                       <div className="my-6 h-px bg-border" />
                     )}
                   </div>
