@@ -5,8 +5,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, ArrowRight, CheckCircle } from 'lucide-react';
+import { ArrowLeft, ArrowRight, CheckCircle, ShoppingCart, Clock } from 'lucide-react';
 import { toast } from 'sonner';
+import { useCartStore } from '@/lib/store/cart';
 
 // Booking components
 import { BookingCalendar } from '@/components/booking-new/BookingCalendar';
@@ -42,6 +43,58 @@ export default function BookVisitPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [bookingReference, setBookingReference] = useState<string>();
+  const [cartItemAdded, setCartItemAdded] = useState(false);
+  const [pricing, setPricing] = useState<Record<string, { price: number; currency: string }>>({});
+  const [pricingLoading, setPricingLoading] = useState(false);
+  
+  // Cart store
+  const { addItem } = useCartStore();
+
+  // Fetch pricing when date is selected
+  useEffect(() => {
+    if (selectedDate && (exhibitionId || showId)) {
+      fetchPricing();
+    }
+  }, [selectedDate, exhibitionId, showId]);
+
+  const fetchPricing = async () => {
+    setPricingLoading(true);
+    try {
+      const params = new URLSearchParams({
+        date: selectedDate!.toISOString().split('T')[0],
+      });
+      if (exhibitionId) params.append('exhibitionId', exhibitionId);
+      if (showId) params.append('showId', showId);
+
+      const response = await fetch(`/api/pricing/current?${params}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setPricing(data.pricing);
+      }
+    } catch (error) {
+      console.error('Error fetching pricing:', error);
+      // Default to free admission if pricing fetch fails
+      setPricing({
+        adult: { price: 0, currency: 'INR' },
+        child: { price: 0, currency: 'INR' },
+        student: { price: 0, currency: 'INR' },
+        senior: { price: 0, currency: 'INR' },
+      });
+    } finally {
+      setPricingLoading(false);
+    }
+  };
+
+  const calculateSubtotal = () => {
+    let total = 0;
+    Object.entries(tickets).forEach(([type, count]) => {
+      if (pricing[type]) {
+        total += pricing[type].price * count;
+      }
+    });
+    return total;
+  };
 
   const steps: { id: BookingStep; title: string; description: string }[] = [
     { id: 'date', title: 'Select Date', description: 'Choose your visit date' },
@@ -103,41 +156,26 @@ export default function BookVisitPage() {
     setError(null);
 
     try {
-      const bookingData: CreateBookingRequest = {
+      // Calculate subtotal based on pricing
+      const subtotal = calculateSubtotal();
+
+      // Add item to cart with calculated pricing
+      await addItem({
         timeSlotId: selectedSlot.id,
-        bookingDate: selectedDate.toISOString().split('T')[0],
-        visitorName: formData.visitorName,
-        visitorEmail: formData.visitorEmail,
-        visitorPhone: formData.visitorPhone,
-        adultTickets: tickets.adult,
-        childTickets: tickets.child,
-        studentTickets: tickets.student,
-        seniorTickets: tickets.senior,
-        totalTickets,
-        subtotal: 0,
-        discount: 0,
-        totalAmount: 0,
-        specialRequirements: formData.specialRequirements,
-        accessibilityRequirements: formData.accessibilityRequirements,
         exhibitionId,
         showId,
-      };
-
-      const response = await fetch('/api/bookings-new/create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(bookingData),
+        exhibitionName,
+        showName,
+        bookingDate: selectedDate.toISOString().split('T')[0],
+        timeSlot: selectedSlot,
+        tickets,
+        totalTickets,
+        subtotal,
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to create booking');
-      }
-
-      setBookingReference(data.bookingReference);
+      setCartItemAdded(true);
       setCurrentStep('confirmation');
-      toast.success('Booking confirmed successfully!');
+      toast.success('Added to cart successfully!');
     } catch (err: any) {
       setError(err.message);
       toast.error(err.message);
@@ -243,6 +281,8 @@ export default function BookVisitPage() {
                     tickets={tickets}
                     onTicketsChange={setTickets}
                     maxTickets={selectedSlot?.availableCapacity || 10}
+                    pricing={pricing}
+                    pricingLoading={pricingLoading}
                   />
                   <div className="flex gap-3">
                     <Button variant="outline" onClick={handleBack} className="flex-1">
@@ -269,11 +309,29 @@ export default function BookVisitPage() {
                   exit={{ opacity: 0, x: -20 }}
                   className="space-y-4"
                 >
-                  <BookingForm
-                    onSubmit={handleSubmit}
-                    loading={loading}
-                    error={error}
-                  />
+                  <div className="space-y-4">
+                    <div className="bg-muted/50 border rounded-lg p-4">
+                      <p className="text-sm font-medium mb-2">Ready to add to cart?</p>
+                      <p className="text-xs text-muted-foreground">
+                        Your seats will be reserved for 15 minutes. You can review and complete your booking in the cart.
+                      </p>
+                    </div>
+                    <Button 
+                      onClick={() => handleSubmit({} as BookingFormData)} 
+                      className="w-full"
+                      disabled={loading}
+                      size="lg"
+                    >
+                      {loading ? (
+                        'Adding to Cart...'
+                      ) : (
+                        <>
+                          <ShoppingCart className="w-4 h-4 mr-2" />
+                          Add to Cart
+                        </>
+                      )}
+                    </Button>
+                  </div>
                   <Button variant="outline" onClick={handleBack} className="w-full">
                     <ArrowLeft className="w-4 h-4 mr-2" />
                     Back to Tickets
@@ -281,7 +339,7 @@ export default function BookVisitPage() {
                 </motion.div>
               )}
 
-              {currentStep === 'confirmation' && bookingReference && (
+              {currentStep === 'confirmation' && cartItemAdded && (
                 <motion.div
                   key="confirmation"
                   initial={{ opacity: 0, scale: 0.95 }}
@@ -289,33 +347,36 @@ export default function BookVisitPage() {
                   className="text-center py-12"
                 >
                   <div className="mb-6">
-                    <CheckCircle className="w-20 h-20 mx-auto text-green-600 mb-4" />
-                    <h2 className="text-3xl font-bold mb-2">Booking Confirmed!</h2>
+                    <ShoppingCart className="w-20 h-20 mx-auto text-green-600 mb-4" />
+                    <h2 className="text-3xl font-bold mb-2">Added to Cart!</h2>
                     <p className="text-lg text-muted-foreground">
-                      Your visit has been successfully booked
+                      Your booking has been added to your cart
                     </p>
                   </div>
 
                   <div className="bg-primary/10 border-2 border-primary/20 rounded-lg p-6 mb-6 inline-block">
-                    <p className="text-sm text-muted-foreground mb-1">Booking Reference</p>
-                    <p className="text-3xl font-bold text-primary">{bookingReference}</p>
+                    <div className="flex items-center gap-2 text-orange-600 mb-2">
+                      <Clock className="w-5 h-5" />
+                      <p className="text-sm font-medium">Reserved for 15 minutes</p>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Complete your booking before the timer expires
+                    </p>
                   </div>
 
                   <div className="space-y-3 max-w-md mx-auto">
                     <p className="text-sm text-muted-foreground">
-                      A confirmation email has been sent to your email address with your booking details.
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      Please arrive 15 minutes before your scheduled time slot.
+                      Your seats have been temporarily reserved. Please proceed to checkout to confirm your booking.
                     </p>
                   </div>
 
                   <div className="flex gap-3 mt-8 max-w-md mx-auto">
-                    <Button variant="outline" onClick={() => router.push('/')} className="flex-1">
-                      Back to Home
+                    <Button variant="outline" onClick={() => window.location.reload()} className="flex-1">
+                      Continue Booking
                     </Button>
-                    <Button onClick={() => window.location.reload()} className="flex-1">
-                      Make Another Booking
+                    <Button onClick={() => router.push('/cart')} className="flex-1">
+                      <ShoppingCart className="w-4 h-4 mr-2" />
+                      View Cart
                     </Button>
                   </div>
                 </motion.div>

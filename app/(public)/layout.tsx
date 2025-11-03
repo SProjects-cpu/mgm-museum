@@ -1,3 +1,5 @@
+import { CartProvider } from '@/components/providers/CartProvider';
+
 export const dynamic = 'force-dynamic';
 
 export default function PublicLayout({
@@ -5,5 +7,9 @@ export default function PublicLayout({
 }: {
   children: React.ReactNode
 }) {
-  return <>{children}</>;
+  return (
+    <CartProvider>
+      {children}
+    </CartProvider>
+  );
 }

@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import { ExhibitionDetailClient } from "./exhibition-detail-client";
 import { notFound } from "next/navigation";
+import { getServiceSupabase } from "@/lib/supabase/config";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -8,17 +9,22 @@ type Props = {
 
 async function getExhibition(slug: string) {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
-    const response = await fetch(`${baseUrl}/api/exhibitions/${slug}`, {
-      cache: 'no-store',
-    });
+    // Direct database query instead of fetch to avoid timeout
+    const supabase = getServiceSupabase();
+    
+    const { data: exhibition, error } = await supabase
+      .from('exhibitions')
+      .select('*')
+      .eq('slug', slug)
+      .eq('status', 'active')
+      .single();
 
-    if (!response.ok) {
+    if (error || !exhibition) {
+      console.error('Error fetching exhibition:', error);
       return null;
     }
 
-    const data = await response.json();
-    return data.exhibition;
+    return exhibition;
   } catch (error) {
     console.error('Error fetching exhibition:', error);
     return null;

@@ -10,6 +10,8 @@ interface TicketSelectorProps {
   tickets: TicketQuantities;
   onTicketsChange: (tickets: TicketQuantities) => void;
   maxTickets?: number;
+  pricing?: Record<string, { price: number; currency: string }>;
+  pricingLoading?: boolean;
 }
 
 const ticketTypes = [
@@ -17,30 +19,45 @@ const ticketTypes = [
     type: 'adult' as const,
     label: 'Adult',
     description: 'Ages 16+',
-    price: 0,
   },
   {
     type: 'child' as const,
     label: 'Child',
     description: 'Ages 0-15',
-    price: 0,
   },
   {
     type: 'student' as const,
     label: 'Student',
     description: 'With valid ID',
-    price: 0,
   },
   {
     type: 'senior' as const,
     label: 'Senior',
     description: 'Ages 60+',
-    price: 0,
   },
 ];
 
-export function TicketSelector({ tickets, onTicketsChange, maxTickets = 10 }: TicketSelectorProps) {
+export function TicketSelector({ 
+  tickets, 
+  onTicketsChange, 
+  maxTickets = 10,
+  pricing = {},
+  pricingLoading = false 
+}: TicketSelectorProps) {
   const totalTickets = Object.values(tickets).reduce((sum, count) => sum + count, 0);
+  
+  const calculateTotal = () => {
+    let total = 0;
+    Object.entries(tickets).forEach(([type, count]) => {
+      if (pricing[type]) {
+        total += pricing[type].price * count;
+      }
+    });
+    return total;
+  };
+
+  const totalCost = calculateTotal();
+  const isFree = totalCost === 0;
 
   const updateTicket = (type: keyof TicketQuantities, delta: number) => {
     const currentValue = tickets[type];
@@ -64,7 +81,9 @@ export function TicketSelector({ tickets, onTicketsChange, maxTickets = 10 }: Ti
         <div className="flex items-center justify-between">
           <div>
             <CardTitle>Select Tickets</CardTitle>
-            <CardDescription>Free admission for all visitors</CardDescription>
+            <CardDescription>
+              {pricingLoading ? 'Loading pricing...' : isFree ? 'Free admission for all visitors' : 'Select your tickets'}
+            </CardDescription>
           </div>
           <Badge variant="secondary" className="flex items-center gap-1">
             <Users className="w-3 h-3" />
@@ -74,7 +93,11 @@ export function TicketSelector({ tickets, onTicketsChange, maxTickets = 10 }: Ti
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {ticketTypes.map((ticketType) => (
+          {ticketTypes.map((ticketType) => {
+            const ticketPrice = pricing[ticketType.type]?.price || 0;
+            const currency = pricing[ticketType.type]?.currency || 'INR';
+            
+            return (
             <div
               key={ticketType.type}
               className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-accent/5 transition-colors"
@@ -82,10 +105,14 @@ export function TicketSelector({ tickets, onTicketsChange, maxTickets = 10 }: Ti
               <div className="flex-1">
                 <div className="flex items-center gap-2">
                   <h4 className="font-semibold">{ticketType.label}</h4>
-                  {ticketType.price === 0 && (
+                  {ticketPrice === 0 ? (
                     <Badge variant="outline" className="text-green-600 border-green-600">
                       Free
                     </Badge>
+                  ) : (
+                    <span className="text-sm font-semibold text-primary">
+                      ₹{ticketPrice.toFixed(2)}
+                    </span>
                   )}
                 </div>
                 <p className="text-sm text-muted-foreground">{ticketType.description}</p>
@@ -117,7 +144,8 @@ export function TicketSelector({ tickets, onTicketsChange, maxTickets = 10 }: Ti
                 </Button>
               </div>
             </div>
-          ))}
+          )}
+          )}
         </div>
 
         {totalTickets === 0 && (
@@ -140,7 +168,11 @@ export function TicketSelector({ tickets, onTicketsChange, maxTickets = 10 }: Ti
           </div>
           <div className="flex items-center justify-between mt-1">
             <span className="text-sm text-muted-foreground">Admission Cost</span>
-            <span className="text-sm font-semibold text-green-600">FREE</span>
+            {isFree ? (
+              <span className="text-sm font-semibold text-green-600">FREE</span>
+            ) : (
+              <span className="text-lg font-bold text-primary">₹{totalCost.toFixed(2)}</span>
+            )}
           </div>
         </div>
       </CardContent>

@@ -4,16 +4,22 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { NAVIGATION_MENU, MUSEUM_INFO } from "@/lib/constants";
-import { Menu, X, ArrowRight } from "lucide-react";
+import { Menu, X, ArrowRight, ShoppingCart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AuthModal } from "@/components/shared/auth-modal";
+import { useCartStore } from "@/lib/store/cart";
 
 export function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "signup">("login");
+  
+  // Cart state
+  const { items, getItemCount, checkExpiredItems } = useCartStore();
+  const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -23,6 +29,18 @@ export function Navbar() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // Update cart count and check expired items
+  useEffect(() => {
+    setCartCount(getItemCount());
+    
+    // Check for expired items every 30 seconds
+    const interval = setInterval(() => {
+      checkExpiredItems();
+    }, 30000);
+
+    return () => clearInterval(interval);
+  }, [items, getItemCount, checkExpiredItems]);
 
   const openLoginModal = () => {
     setAuthMode("login");
@@ -115,6 +133,30 @@ export function Navbar() {
               >
                 Login
               </Button>
+              
+              {/* Cart Button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                asChild
+                className={cn(
+                  "relative hover:bg-primary/10 transition-all duration-300",
+                  !isScrolled && "text-white hover:text-white hover:bg-white/10"
+                )}
+              >
+                <Link href="/cart">
+                  <ShoppingCart className="w-5 h-5" />
+                  {cartCount > 0 && (
+                    <Badge 
+                      variant="destructive" 
+                      className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                    >
+                      {cartCount}
+                    </Badge>
+                  )}
+                </Link>
+              </Button>
+              
               <Button 
                 size="sm" 
                 className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 shadow-lg hover:shadow-xl hover:shadow-primary/40 transition-all duration-300 group"
@@ -161,6 +203,23 @@ export function Navbar() {
                   <Button variant="outline" size="sm" className="w-full" onClick={openLoginModal}>
                     Login
                   </Button>
+                  
+                  {/* Cart Button Mobile */}
+                  <Button variant="outline" size="sm" className="w-full relative" asChild>
+                    <Link href="/cart" onClick={() => setIsMobileMenuOpen(false)}>
+                      <ShoppingCart className="w-4 h-4 mr-2" />
+                      Cart
+                      {cartCount > 0 && (
+                        <Badge 
+                          variant="destructive" 
+                          className="ml-auto h-5 w-5 flex items-center justify-center p-0 text-xs"
+                        >
+                          {cartCount}
+                        </Badge>
+                      )}
+                    </Link>
+                  </Button>
+                  
                   <Button size="sm" className="w-full gradient-primary" asChild>
                     <Link href="/exhibitions">Book Tickets</Link>
                   </Button>

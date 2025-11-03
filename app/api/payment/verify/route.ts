@@ -1,0 +1,167 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { getServiceSupabase } from '@/lib/supabase/config';
+import { verifyPaymentSignature } from '@/lib/razorpay/utils';
+
+export async function POST(request: NextRequest) {
+  try {
+    const supabase = getServiceSupabase();
+    
+    // Get request body
+    const body = await request.json();
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = body;
+
+    // Validate required fields
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      return NextResponse.json(
+        { success: false, message: 'Missing payment verification data' },
+        { status: 400 }
+      );
+    }
+
+    // Verify payment signature
+    const isValid = verifyPaymentSignature(
+      razorpay_order_id,
+      razorpay_payment_id,
+      razorpay_signature
+    );
+
+    if (!isValid) {
+      // Log security event
+      console.error('Invalid payment signature detected:', {
+        order_id: razorpay_order_id,
+        payment_id: razorpay_payment_id,
+      });
+
+      return NextResponse.json(
+        { success: false, message: 'Invalid payment signature' },
+        { status: 400 }
+      );
+    }
+
+    // Get authenticated user
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader) {
+      return NextResponse.json(
+        { success: false, message: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
+
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid authentication' },
+        { status: 401 }
+      );
+    }
+
+    // Fetch payment order from database
+    const { data: paymentOrder, error: fetchError } = await supabase
+      .from('payment_orders')
+      .select('*')
+      .eq('razorpay_order_id', razorpay_order_id)
+      .eq('user_id', user.id)
+      .single();
+
+    if (fetchError || !paymentOrder) {
+      return NextResponse.json(
+        { success: false, message: 'Payment order not found' },
+        { status: 404 }
+      );
+    }
+
+    // Check if already processed
+    if (paymentOrder.status === 'paid') {
+      return NextResponse.json(
+        { success: false, message: 'Payment already processed' },
+        { status: 400 }
+      );
+    }
+
+    // Update payment order status
+    const { error: updateError } = await supabase
+      .from('payment_orders')
+      .update({
+        status: 'paid',
+        payment_id: razorpay_payment_id,
+        payment_signature: razorpay_signature,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', paymentOrder.id);
+
+    if (updateError) {
+      console.error('Failed to update payment order:', updateError);
+      return NextResponse.json(
+        { success: false, message: 'Failed to update payment status' },
+        { status: 500 }
+      );
+    }
+
+    // Convert cart items to bookings
+    const cartItems = paymentOrder.cart_snapshot as any[];
+    const bookings: any[] = [];
+
+    for (const item of cartItems) {
+      // Generate booking reference
+      const bookingReference = `BK${Date.now()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+
+      // Create booking
+      const { data: booking, error: bookingError } = await supabase
+        .from('bookings')
+        .insert({
+          booking_reference: bookingReference,
+          user_id: user.id,
+          time_slot_id: item.timeSlotId,
+          exhibition_id: item.exhibitionId,
+          show_id: item.showId,
+          booking_date: item.bookingDate,
+          visitor_name: paymentOrder.payment_email || user.email,
+          visitor_email: paymentOrder.payment_email || user.email,
+          visitor_phone: paymentOrder.payment_contact,
+          adult_tickets: item.tickets.adult || 0,
+          child_tickets: item.tickets.child || 0,
+          student_tickets: item.tickets.student || 0,
+          senior_tickets: item.tickets.senior || 0,
+          total_tickets: item.totalTickets,
+          subtotal: item.subtotal || 0,
+          discount: 0,
+          total_amount: item.subtotal || 0,
+          status: 'confirmed',
+          payment_status: 'paid',
+          payment_order_id: razorpay_order_id,
+          payment_id: razorpay_payment_id,
+          payment_method: 'razorpay',
+        })
+        .select()
+        .single();
+
+      if (bookingError) {
+        console.error('Failed to create booking:', bookingError);
+        continue;
+      }
+
+      bookings.push(booking);
+    }
+
+    // Clear cart items for user
+    await supabase
+      .from('cart_items')
+      .delete()
+      .eq('user_id', user.id);
+
+    return NextResponse.json({
+      success: true,
+      bookings,
+      message: 'Payment verified and bookings created successfully',
+    });
+  } catch (error: any) {
+    console.error('Error verifying payment:', error);
+    return NextResponse.json(
+      { success: false, message: error.message || 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}

@@ -1,35 +1,61 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { getServiceSupabase } from '@/lib/supabase/client';
 
-// GET - Fetch all pricing
+/**
+ * GET /api/admin/pricing
+ * Get all pricing tiers with optional filters
+ */
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient();
     const searchParams = request.nextUrl.searchParams;
-    const itemId = searchParams.get('itemId');
-    const itemType = searchParams.get('itemType'); // 'show' or 'exhibition'
+    const exhibitionId = searchParams.get('exhibitionId');
+    const showId = searchParams.get('showId');
+    const ticketType = searchParams.get('ticketType');
+    const isActive = searchParams.get('isActive');
 
-    let query = supabase.from('pricing').select('*');
+    const supabase = getServiceSupabase();
 
-    if (itemId && itemType) {
-      const column = itemType === 'show' ? 'show_id' : 'exhibition_id';
-      query = query.eq(column, itemId);
+    // Build query
+    let query = supabase
+      .from('pricing_tiers')
+      .select(`
+        *,
+        exhibition:exhibitions(id, name, slug),
+        show:shows(id, name, slug)
+      `)
+      .order('created_at', { ascending: false });
+
+    // Apply filters
+    if (exhibitionId) {
+      query = query.eq('exhibition_id', exhibitionId);
+    }
+    if (showId) {
+      query = query.eq('show_id', showId);
+    }
+    if (ticketType) {
+      query = query.eq('ticket_type', ticketType);
+    }
+    if (isActive !== null && isActive !== undefined) {
+      query = query.eq('is_active', isActive === 'true');
     }
 
-    const { data: pricing, error } = await query;
+    const { data: pricingTiers, error } = await query;
 
     if (error) {
-      console.error('Error fetching pricing:', error);
+      console.error('Error fetching pricing tiers:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch pricing' },
+        { error: 'Failed to fetch pricing tiers' },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ pricing: pricing || [] });
+    return NextResponse.json({
+      success: true,
+      pricingTiers,
+    });
   } catch (error) {
-    console.error('Error in pricing API:', error);
+    console.error('Pricing API error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
@@ -37,23 +63,50 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Create new pricing tier
+/**
+ * POST /api/admin/pricing
+ * Create a new pricing tier
+ */
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient();
     const body = await request.json();
-
     const {
-      itemId,
-      itemType, // 'show' or 'exhibition'
+      exhibitionId,
+      showId,
       ticketType,
       price,
-      active = true
+      currency = 'INR',
+      validFrom,
+      validUntil,
+      isActive = true,
     } = body;
 
-    if (!itemId || !itemType || !ticketType || price === undefined) {
+    // Validation
+    if (!ticketType || price === undefined || price === null || !validFrom) {
       return NextResponse.json(
-        { error: 'Missing required fields: itemId, itemType, ticketType, price' },
+        { error: 'ticketType, price, and validFrom are required' },
+        { status: 400 }
+      );
+    }
+
+    if (!exhibitionId && !showId) {
+      return NextResponse.json(
+        { error: 'Either exhibitionId or showId is required' },
+        { status: 400 }
+      );
+    }
+
+    if (exhibitionId && showId) {
+      return NextResponse.json(
+        { error: 'Cannot set both exhibitionId and showId' },
+        { status: 400 }
+      );
+    }
+
+    const validTicketTypes = ['adult', 'child', 'student', 'senior'];
+    if (!validTicketTypes.includes(ticketType)) {
+      return NextResponse.json(
+        { error: 'Invalid ticket type. Must be: adult, child, student, or senior' },
         { status: 400 }
       );
     }
@@ -65,44 +118,200 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const pricingData: any = {
-      ticket_type: ticketType,
-      price,
-      active,
-      valid_from: new Date().toISOString()
-    };
+    const supabase = getServiceSupabase();
 
-    if (itemType === 'show') {
-      pricingData.show_id = itemId;
-    } else if (itemType === 'exhibition') {
-      pricingData.exhibition_id = itemId;
-    } else {
+    // Check for overlapping pricing tiers
+    let overlapQuery = supabase
+      .from('pricing_tiers')
+      .select('id')
+      .eq('ticket_type', ticketType)
+      .eq('is_active', true);
+
+    if (exhibitionId) {
+      overlapQuery = overlapQuery.eq('exhibition_id', exhibitionId);
+    }
+    if (showId) {
+      overlapQuery = overlapQuery.eq('show_id', showId);
+    }
+
+    // Check for date overlap
+    overlapQuery = overlapQuery.or(
+      `and(valid_from.lte.${validFrom},or(valid_until.gte.${validFrom},valid_until.is.null)),` +
+      `and(valid_from.lte.${validUntil || '9999-12-31'},or(valid_until.gte.${validFrom},valid_until.is.null))`
+    );
+
+    const { data: overlapping } = await overlapQuery;
+
+    if (overlapping && overlapping.length > 0) {
       return NextResponse.json(
-        { error: 'Invalid itemType. Must be "show" or "exhibition"' },
-        { status: 400 }
+        { error: 'A pricing tier with overlapping dates already exists for this ticket type' },
+        { status: 409 }
       );
     }
 
-    const { data: pricing, error } = await supabase
-      .from('pricing')
-      .insert(pricingData)
+    // Insert new pricing tier
+    const { data, error } = await supabase
+      .from('pricing_tiers')
+      .insert({
+        exhibition_id: exhibitionId || null,
+        show_id: showId || null,
+        ticket_type: ticketType,
+        price,
+        currency,
+        valid_from: validFrom,
+        valid_until: validUntil || null,
+        is_active: isActive,
+      })
       .select()
       .single();
 
     if (error) {
-      console.error('Error creating pricing:', error);
+      console.error('Error creating pricing tier:', error);
       return NextResponse.json(
-        { error: 'Failed to create pricing' },
+        { error: 'Failed to create pricing tier' },
         { status: 500 }
       );
     }
 
     return NextResponse.json({
-      pricing,
-      message: 'Pricing tier created successfully'
+      success: true,
+      pricingTier: data,
+      message: 'Pricing tier created successfully',
     });
   } catch (error) {
-    console.error('Error in create pricing API:', error);
+    console.error('Create pricing API error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * PUT /api/admin/pricing
+ * Update an existing pricing tier
+ */
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const {
+      id,
+      ticketType,
+      price,
+      currency,
+      validFrom,
+      validUntil,
+      isActive,
+    } = body;
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Pricing tier ID is required' },
+        { status: 400 }
+      );
+    }
+
+    const supabase = getServiceSupabase();
+
+    // Build update object
+    const updates: any = {};
+    if (ticketType !== undefined) {
+      const validTicketTypes = ['adult', 'child', 'student', 'senior'];
+      if (!validTicketTypes.includes(ticketType)) {
+        return NextResponse.json(
+          { error: 'Invalid ticket type' },
+          { status: 400 }
+        );
+      }
+      updates.ticket_type = ticketType;
+    }
+    if (price !== undefined) {
+      if (price < 0) {
+        return NextResponse.json(
+          { error: 'Price cannot be negative' },
+          { status: 400 }
+        );
+      }
+      updates.price = price;
+    }
+    if (currency !== undefined) updates.currency = currency;
+    if (validFrom !== undefined) updates.valid_from = validFrom;
+    if (validUntil !== undefined) updates.valid_until = validUntil;
+    if (isActive !== undefined) updates.is_active = isActive;
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json(
+        { error: 'No fields to update' },
+        { status: 400 }
+      );
+    }
+
+    const { data, error } = await supabase
+      .from('pricing_tiers')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating pricing tier:', error);
+      return NextResponse.json(
+        { error: 'Failed to update pricing tier' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      pricingTier: data,
+      message: 'Pricing tier updated successfully',
+    });
+  } catch (error) {
+    console.error('Update pricing API error:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * DELETE /api/admin/pricing
+ * Delete a pricing tier
+ */
+export async function DELETE(request: NextRequest) {
+  try {
+    const searchParams = request.nextUrl.searchParams;
+    const id = searchParams.get('id');
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Pricing tier ID is required' },
+        { status: 400 }
+      );
+    }
+
+    const supabase = getServiceSupabase();
+
+    const { error } = await supabase
+      .from('pricing_tiers')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      console.error('Error deleting pricing tier:', error);
+      return NextResponse.json(
+        { error: 'Failed to delete pricing tier' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'Pricing tier deleted successfully',
+    });
+  } catch (error) {
+    console.error('Delete pricing API error:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

@@ -12,6 +12,7 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
     const status = searchParams.get('status');
+    const paymentStatus = searchParams.get('paymentStatus');
     const searchTerm = searchParams.get('search');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '20');
@@ -35,6 +36,14 @@ export async function GET(request: NextRequest) {
         show:shows(
           name,
           slug
+        ),
+        payment_order:payment_orders!payment_orders_id_fkey(
+          razorpay_order_id,
+          amount,
+          currency,
+          status,
+          payment_id,
+          created_at
         )
       `, { count: 'exact' })
       .order('created_at', { ascending: false });
@@ -49,8 +58,11 @@ export async function GET(request: NextRequest) {
     if (status) {
       query = query.eq('status', status);
     }
+    if (paymentStatus) {
+      query = query.eq('payment_status', paymentStatus);
+    }
     if (searchTerm) {
-      query = query.or(`visitor_name.ilike.%${searchTerm}%,visitor_email.ilike.%${searchTerm}%,booking_reference.ilike.%${searchTerm}%`);
+      query = query.or(`visitor_name.ilike.%${searchTerm}%,visitor_email.ilike.%${searchTerm}%,booking_reference.ilike.%${searchTerm}%,razorpay_order_id.ilike.%${searchTerm}%,razorpay_payment_id.ilike.%${searchTerm}%`);
     }
 
     // Pagination
