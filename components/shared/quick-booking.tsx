@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +9,21 @@ import { motion } from "framer-motion";
 import { useInView } from "react-intersection-observer";
 import Link from "next/link";
 import { FallingPattern } from "@/components/ui/falling-pattern";
+
+interface TicketShowcaseConfig {
+  id: string;
+  is_enabled: boolean;
+  price_per_person: number;
+  currency: string;
+  currency_symbol: string;
+  button_text: string;
+  button_link: string;
+  opening_time: string;
+  closing_time: string;
+  closed_days: string[];
+  features: string[];
+  experience_types: Array<{ value: string; label: string }>;
+}
 
 export function QuickBooking() {
   const [ref, inView] = useInView({
@@ -19,14 +34,37 @@ export function QuickBooking() {
   const [date, setDate] = useState("");
   const [visitors, setVisitors] = useState("2");
   const [experience, setExperience] = useState("general");
+  const [config, setConfig] = useState<TicketShowcaseConfig | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const today = new Date().toISOString().split("T")[0];
 
-  const museumFeatures = [
-    ["Interactive Exhibitions", "Planetarium Shows", "3D Theatre Experience"],
-    ["Educational Programs", "Group Discounts", "Free Parking"],
-    ["Accessibility Support", "Multilingual Guides", "Cafeteria Available"],
-  ];
+  useEffect(() => {
+    fetchConfig();
+  }, []);
+
+  const fetchConfig = async () => {
+    try {
+      const response = await fetch('/api/ticket-showcase');
+      const data = await response.json();
+      if (data.success) {
+        setConfig(data.config);
+      }
+    } catch (error) {
+      console.error('Error fetching ticket showcase config:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading || !config || !config.is_enabled) {
+    return null;
+  }
+
+  const featureGroups = [];
+  for (let i = 0; i < config.features.length; i += 3) {
+    featureGroups.push(config.features.slice(i, i + 3));
+  }
 
   return (
     <section className="py-32 bg-muted/50 relative overflow-hidden">
@@ -55,14 +93,14 @@ export function QuickBooking() {
             <div className="mx-auto flex w-full flex-col rounded-lg border p-6 sm:w-fit sm:min-w-80 bg-background shadow-xl">
               {/* Pricing Display */}
               <div className="flex justify-center mb-6">
-                <span className="text-lg font-semibold">₹</span>
-                <span className="text-6xl font-semibold">150</span>
+                <span className="text-lg font-semibold">{config.currency_symbol}</span>
+                <span className="text-6xl font-semibold">{config.price_per_person}</span>
                 <span className="self-end text-muted-foreground">/person</span>
               </div>
 
               {/* Features List */}
               <div className="my-6">
-                {museumFeatures.map((featureGroup, idx) => (
+                {featureGroups.map((featureGroup, idx) => (
                   <div key={idx}>
                     <ul className="flex flex-col gap-3">
                       {featureGroup.map((feature, i) => (
@@ -97,9 +135,11 @@ export function QuickBooking() {
                     min={today}
                     className="w-full"
                   />
-                  <p className="text-xs text-muted-foreground">
-                    Closed on Mondays
-                  </p>
+                  {config.closed_days.length > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      Closed on {config.closed_days.join(', ')}
+                    </p>
+                  )}
                 </div>
 
                 {/* Visitors Selection */}
@@ -135,10 +175,11 @@ export function QuickBooking() {
                     onChange={(e) => setExperience(e.target.value)}
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
-                    <option value="general">General Admission</option>
-                    <option value="planetarium">Planetarium Show</option>
-                    <option value="3d_theatre">3D Theatre</option>
-                    <option value="combo">Combo Package</option>
+                    {config.experience_types.map((type) => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -148,16 +189,17 @@ export function QuickBooking() {
                 size="lg"
                 className="w-full gradient-primary text-lg font-semibold"
                 onClick={() => {
-                  window.location.href = '/book-visit';
+                  window.location.href = config.button_link;
                 }}
               >
-                Find Available Tickets
+                {config.button_text}
               </Button>
 
               {/* Info Text */}
               <div className="mt-6 p-4 bg-accent/10 rounded-lg">
                 <p className="text-sm text-center text-muted-foreground">
-                  <strong>Opening Hours:</strong> 9:30 AM - 5:30 PM (Closed Mondays)
+                  <strong>Opening Hours:</strong> {config.opening_time} - {config.closing_time}
+                  {config.closed_days.length > 0 && ` (Closed ${config.closed_days.join(', ')})`}
                   {" | "}
                   <Link href="/plan-visit" className="text-primary hover:underline">
                     View all details
