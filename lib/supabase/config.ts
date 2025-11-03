@@ -33,15 +33,19 @@ const dummyClient = {
 } as any;
 
 // Client-side Supabase client (browser)
-export const supabase = isSupabaseConfigured 
-  ? createClient<Database>(supabaseUrl, supabaseAnonKey, {
-      auth: {
-        persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true,
-      },
-    })
-  : dummyClient;
+// DISABLED: Causing WebSocket errors - use dummy client always
+export const supabase = dummyClient;
+
+// Original code (disabled):
+// export const supabase = isSupabaseConfigured 
+//   ? createClient<Database>(supabaseUrl, supabaseAnonKey, {
+//       auth: {
+//         persistSession: true,
+//         autoRefreshToken: true,
+//         detectSessionInUrl: true,
+//       },
+//     })
+//   : dummyClient;
 
 // Server-side Supabase client with service role
 export function getServiceSupabase() {
