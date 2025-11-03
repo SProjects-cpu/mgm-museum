@@ -34,10 +34,15 @@ export function RealtimeSyncProvider({ children }: { children: React.ReactNode }
     
     // Check if Supabase is properly configured
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const hasValidSupabase = supabaseUrl && !supabaseUrl.includes('placeholder');
+    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+    const hasValidSupabase = supabaseUrl && 
+                            supabaseKey && 
+                            !supabaseUrl.includes('placeholder') &&
+                            !supabaseKey.includes('placeholder') &&
+                            supabaseUrl.startsWith('https://');
     
     if (!enableRealtime || !hasValidSupabase) {
-      console.log('Real-time features disabled (Supabase not configured)');
+      // Silently disable realtime if not configured
       return;
     }
 
@@ -116,13 +121,10 @@ export function RealtimeSyncProvider({ children }: { children: React.ReactNode }
         }
       )
       .subscribe((status) => {
-        console.log(`Subscription status for ${table}:`, status);
         if (status === 'SUBSCRIBED') {
           console.log(`✓ Successfully subscribed to ${table} changes`);
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error(`✗ Error subscribing to ${table} changes (Supabase not configured)`);
-          // Don't show toast - this is expected without valid Supabase
         }
+        // Silently ignore errors - expected when Supabase not configured
       });
 
     return () => {

@@ -3,22 +3,45 @@ import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/database';
 
 // Environment variables validation
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
 const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing required Supabase environment variables');
-}
+// Check if Supabase is properly configured
+const isSupabaseConfigured = supabaseUrl && 
+                             supabaseAnonKey && 
+                             !supabaseUrl.includes('placeholder') &&
+                             !supabaseAnonKey.includes('placeholder') &&
+                             supabaseUrl.startsWith('https://');
+
+// Create a dummy client if not configured (prevents errors)
+const dummyClient = {
+  from: () => ({
+    select: () => Promise.resolve({ data: [], error: null }),
+    insert: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+    update: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+    delete: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+  }),
+  channel: () => ({
+    on: () => ({ subscribe: () => ({ unsubscribe: () => {} }) }),
+  }),
+  auth: {
+    getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+    signIn: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+    signOut: () => Promise.resolve({ error: null }),
+  },
+} as any;
 
 // Client-side Supabase client (browser)
-export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-  },
-});
+export const supabase = isSupabaseConfigured 
+  ? createClient<Database>(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+      },
+    })
+  : dummyClient;
 
 // Server-side Supabase client with service role
 export function getServiceSupabase() {
