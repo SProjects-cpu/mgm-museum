@@ -14,6 +14,14 @@ const isSupabaseConfigured = supabaseUrl &&
                              !supabaseAnonKey.includes('placeholder') &&
                              supabaseUrl.startsWith('https://');
 
+// Environment-based realtime control
+const isDevelopment = process.env.NODE_ENV === 'development';
+const enableRealtime = process.env.NEXT_PUBLIC_ENABLE_REALTIME === 'true';
+const shouldEnableRealtime = isDevelopment || enableRealtime;
+
+// Export realtime status for components to check
+export const isRealtimeEnabled = shouldEnableRealtime;
+
 // Create a dummy client if not configured (prevents errors)
 const dummyClient = {
   from: () => ({
@@ -32,7 +40,7 @@ const dummyClient = {
   },
 } as any;
 
-// Client-side Supabase client (browser) with REALTIME DISABLED
+// Client-side Supabase client (browser) with ENVIRONMENT-BASED REALTIME
 export const supabase = isSupabaseConfigured 
   ? createClient<Database>(supabaseUrl, supabaseAnonKey, {
       auth: {
@@ -42,16 +50,22 @@ export const supabase = isSupabaseConfigured
       },
       realtime: {
         params: {
-          eventsPerSecond: 0, // DISABLE REALTIME - No WebSocket connections
+          // Enable in development OR when explicitly enabled via env var
+          // Disable in production by default to prevent WebSocket errors
+          eventsPerSecond: shouldEnableRealtime ? 10 : 0,
         },
       },
     })
   : dummyClient;
 
-// Prevent any automatic channel subscriptions
-if (isSupabaseConfigured && typeof window !== 'undefined') {
-  // Remove all channels on client initialization
-  supabase.removeAllChannels?.();
+// Log realtime status (helpful for debugging)
+if (typeof window !== 'undefined' && isSupabaseConfigured) {
+  console.log(`[Supabase] Realtime: ${shouldEnableRealtime ? 'ENABLED' : 'DISABLED'} (${process.env.NODE_ENV})`);
+  
+  // Remove all channels if realtime is disabled
+  if (!shouldEnableRealtime) {
+    supabase.removeAllChannels?.();
+  }
 }
 
 // Server-side Supabase client with service role
@@ -68,7 +82,8 @@ export function getServiceSupabase() {
     },
     realtime: {
       params: {
-        eventsPerSecond: 0, // DISABLE REALTIME on server too
+        // Server-side realtime also environment-based
+        eventsPerSecond: shouldEnableRealtime ? 10 : 0,
       },
     },
   });
@@ -110,15 +125,53 @@ export async function validateDatabaseConnection(): Promise<{
   }
 }
 
-// DISABLED: Real-time subscription helper
-// Realtime is disabled to prevent WebSocket errors
+// Real-time subscription helper with environment check
 export function subscribeToChanges<T>(
   table: string,
   callback: (payload: T) => void,
   filter?: string
 ) {
-  console.warn('Realtime subscriptions are disabled. Use manual refresh instead.');
-  return () => {}; // Return empty cleanup function
+  // Only allow subscriptions if realtime is enabled
+  if (!shouldEnableRealtime) {
+    console.warn(`[Supabase] Realtime is disabled. Subscription to '${table}' ignored.`);
+    return () => {}; // Return empty cleanup function
+  }
+
+  try {
+    const channel = supabase.channel(`${table}-changes`);
+
+    const subscription = channel.on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table,
+        filter,
+      },
+      (payload) => {
+        try {
+          callback(payload.new as T);
+        } catch (error) {
+          console.error(`Error in realtime callback for ${table}:`, error);
+        }
+      }
+    );
+
+    subscription.subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        console.log(`[Supabase] Successfully subscribed to ${table} changes`);
+      } else if (status === 'CHANNEL_ERROR') {
+        console.error(`[Supabase] Error subscribing to ${table} changes:`, status);
+      }
+    });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  } catch (error) {
+    console.error(`Error setting up realtime subscription for ${table}:`, error);
+    return () => {}; // Return empty cleanup function
+  }
 }
 
 // Helper to check if user is admin
@@ -199,7 +252,8 @@ export async function uploadToStorage(
 export const supabaseConfig = {
   isConfigured: isSupabaseConfigured,
   hasServiceRole: !!supabaseServiceRoleKey,
-  realtimeEnabled: false, // Always false - realtime is disabled
+  realtimeEnabled: shouldEnableRealtime,
+  environment: process.env.NODE_ENV,
 };
 
 // Export types
