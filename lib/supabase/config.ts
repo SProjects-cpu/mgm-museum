@@ -23,22 +23,65 @@ const shouldEnableRealtime = false;
 export const isRealtimeEnabled = shouldEnableRealtime;
 
 // Create a dummy client if not configured (prevents errors)
-const dummyClient = {
-  from: () => ({
-    select: () => Promise.resolve({ data: [], error: null }),
-    insert: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
-    update: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
-    delete: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
-  }),
-  channel: () => ({
-    on: () => ({ subscribe: () => ({ unsubscribe: () => {} }) }),
-  }),
-  auth: {
-    getSession: () => Promise.resolve({ data: { session: null }, error: null }),
-    signIn: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
-    signOut: () => Promise.resolve({ error: null }),
-  },
-} as any;
+const createDummyClient = () => {
+  const dummyQuery = {
+    select: () => dummyQuery,
+    insert: () => dummyQuery,
+    update: () => dummyQuery,
+    delete: () => dummyQuery,
+    eq: () => dummyQuery,
+    neq: () => dummyQuery,
+    gt: () => dummyQuery,
+    gte: () => dummyQuery,
+    lt: () => dummyQuery,
+    lte: () => dummyQuery,
+    like: () => dummyQuery,
+    ilike: () => dummyQuery,
+    is: () => dummyQuery,
+    in: () => dummyQuery,
+    contains: () => dummyQuery,
+    containedBy: () => dummyQuery,
+    rangeGt: () => dummyQuery,
+    rangeGte: () => dummyQuery,
+    rangeLt: () => dummyQuery,
+    rangeLte: () => dummyQuery,
+    rangeAdjacent: () => dummyQuery,
+    overlaps: () => dummyQuery,
+    textSearch: () => dummyQuery,
+    match: () => dummyQuery,
+    not: () => dummyQuery,
+    or: () => dummyQuery,
+    filter: () => dummyQuery,
+    order: () => dummyQuery,
+    limit: () => dummyQuery,
+    range: () => dummyQuery,
+    single: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+    maybeSingle: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+    then: (resolve: any) => resolve({ data: [], error: new Error('Supabase not configured') }),
+  };
+
+  return {
+    from: () => dummyQuery,
+    rpc: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+    channel: () => ({
+      on: () => ({ subscribe: () => ({ unsubscribe: () => {} }) }),
+    }),
+    auth: {
+      getSession: () => Promise.resolve({ data: { session: null }, error: null }),
+      getUser: () => Promise.resolve({ data: { user: null }, error: null }),
+      signIn: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+      signOut: () => Promise.resolve({ error: null }),
+    },
+    storage: {
+      from: () => ({
+        upload: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
+        getPublicUrl: () => ({ data: { publicUrl: '' } }),
+      }),
+    },
+  } as any;
+};
+
+const dummyClient = createDummyClient();
 
 // Client-side Supabase client (browser) with REALTIME ENABLED
 export const supabase = isSupabaseConfigured 
