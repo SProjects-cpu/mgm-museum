@@ -20,7 +20,24 @@ export default function BookVisitPage() {
   const exhibitionName = searchParams.get('exhibitionName') || 'Exhibition';
   const action = searchParams.get('action');
   const [addingToCart, setAddingToCart] = useState(false);
+  const [user, setUser] = useState<any>(null);
   const { addItem } = useCartStore();
+
+  // Check if user is logged in
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+    };
+    checkUser();
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    toast.success('Logged out successfully');
+    router.push('/');
+  };
 
   const {
     step,
@@ -145,9 +162,16 @@ export default function BookVisitPage() {
     <div className="min-h-screen bg-background py-8 px-4">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">Book Your Visit</h1>
-          <p className="text-lg text-muted-foreground">{exhibitionName}</p>
+        <div className="mb-8 flex justify-between items-start">
+          <div>
+            <h1 className="text-4xl font-bold mb-2">Book Your Visit</h1>
+            <p className="text-lg text-muted-foreground">{exhibitionName}</p>
+          </div>
+          {user && (
+            <Button variant="outline" onClick={handleLogout}>
+              Logout
+            </Button>
+          )}
         </div>
 
         {/* Progress Steps */}

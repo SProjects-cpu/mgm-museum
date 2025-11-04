@@ -55,10 +55,12 @@ export default function CheckoutPage() {
   // Get user data and handle pending booking
   useEffect(() => {
     let isMounted = true;
-    let processed = false;
     
     const getUser = async () => {
-      if (processed) return;
+      // Check if already processed in this session
+      if (sessionStorage.getItem('booking_processed')) {
+        return;
+      }
       try {
         const { data: { user } } = await supabase.auth.getUser();
         
@@ -121,16 +123,16 @@ export default function CheckoutPage() {
 
               if (!isMounted) return;
               
-              processed = true;
               sessionStorage.removeItem('pendingBooking');
+              sessionStorage.setItem('booking_processed', 'true');
               toast.success('Booking added to cart!', { id: 'add-booking' });
             } catch (error: any) {
               console.error('Error adding pending booking:', error);
               
               if (!isMounted) return;
               
-              processed = true;
               sessionStorage.removeItem('pendingBooking');
+              sessionStorage.setItem('booking_processed', 'true');
               toast.error('Failed to add booking. Please try again.', { id: 'add-booking' });
               
               setTimeout(() => {
