@@ -14,10 +14,9 @@ const isSupabaseConfigured = supabaseUrl &&
                              !supabaseAnonKey.includes('placeholder') &&
                              supabaseUrl.startsWith('https://');
 
-// Environment-based realtime control
-const isDevelopment = process.env.NODE_ENV === 'development';
-const enableRealtime = process.env.NEXT_PUBLIC_ENABLE_REALTIME === 'true';
-const shouldEnableRealtime = isDevelopment || enableRealtime;
+// ALWAYS enable realtime for production booking system
+// We'll handle errors gracefully instead of disabling
+const shouldEnableRealtime = true;
 
 // Export realtime status for components to check
 export const isRealtimeEnabled = shouldEnableRealtime;
@@ -40,7 +39,7 @@ const dummyClient = {
   },
 } as any;
 
-// Client-side Supabase client (browser) with ENVIRONMENT-BASED REALTIME
+// Client-side Supabase client (browser) with REALTIME ENABLED
 export const supabase = isSupabaseConfigured 
   ? createClient<Database>(supabaseUrl, supabaseAnonKey, {
       auth: {
@@ -50,9 +49,12 @@ export const supabase = isSupabaseConfigured
       },
       realtime: {
         params: {
-          // Enable in development OR when explicitly enabled via env var
-          // Disable in production by default to prevent WebSocket errors
-          eventsPerSecond: shouldEnableRealtime ? 10 : 0,
+          eventsPerSecond: 10, // ENABLED for production booking system
+        },
+      },
+      global: {
+        headers: {
+          'x-client-info': 'mgm-museum-web',
         },
       },
     })
@@ -60,12 +62,7 @@ export const supabase = isSupabaseConfigured
 
 // Log realtime status (helpful for debugging)
 if (typeof window !== 'undefined' && isSupabaseConfigured) {
-  console.log(`[Supabase] Realtime: ${shouldEnableRealtime ? 'ENABLED' : 'DISABLED'} (${process.env.NODE_ENV})`);
-  
-  // Remove all channels if realtime is disabled
-  if (!shouldEnableRealtime) {
-    supabase.removeAllChannels?.();
-  }
+  console.log(`[Supabase] Realtime: ENABLED for booking system (${process.env.NODE_ENV})`);
 }
 
 // Server-side Supabase client with service role
@@ -82,8 +79,7 @@ export function getServiceSupabase() {
     },
     realtime: {
       params: {
-        // Server-side realtime also environment-based
-        eventsPerSecond: shouldEnableRealtime ? 10 : 0,
+        eventsPerSecond: 10, // Also enabled on server
       },
     },
   });
@@ -125,18 +121,12 @@ export async function validateDatabaseConnection(): Promise<{
   }
 }
 
-// Real-time subscription helper with environment check
+// Real-time subscription helper with error handling
 export function subscribeToChanges<T>(
   table: string,
   callback: (payload: T) => void,
   filter?: string
 ) {
-  // Only allow subscriptions if realtime is enabled
-  if (!shouldEnableRealtime) {
-    console.warn(`[Supabase] Realtime is disabled. Subscription to '${table}' ignored.`);
-    return () => {}; // Return empty cleanup function
-  }
-
   try {
     const channel = supabase.channel(`${table}-changes`);
 
@@ -157,16 +147,25 @@ export function subscribeToChanges<T>(
       }
     );
 
-    subscription.subscribe((status) => {
+    subscription.subscribe((status, err) => {
       if (status === 'SUBSCRIBED') {
         console.log(`[Supabase] Successfully subscribed to ${table} changes`);
       } else if (status === 'CHANNEL_ERROR') {
-        console.error(`[Supabase] Error subscribing to ${table} changes:`, status);
+        console.error(`[Supabase] Error subscribing to ${table}:`, err);
+        // Don't throw error, just log it
+      } else if (status === 'TIMED_OUT') {
+        console.warn(`[Supabase] Subscription to ${table} timed out, will retry`);
+      } else if (status === 'CLOSED') {
+        console.log(`[Supabase] Subscription to ${table} closed`);
       }
     });
 
     return () => {
-      supabase.removeChannel(channel);
+      try {
+        supabase.removeChannel(channel);
+      } catch (error) {
+        console.error(`Error removing channel for ${table}:`, error);
+      }
     };
   } catch (error) {
     console.error(`Error setting up realtime subscription for ${table}:`, error);
