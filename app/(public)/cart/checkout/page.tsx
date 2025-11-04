@@ -114,7 +114,13 @@ export default function CheckoutPage() {
             console.error('Error adding pending booking:', error);
             toast.error(error.message || 'Failed to add booking to cart', { id: 'add-booking' });
             sessionStorage.removeItem('pendingBooking');
+            // Redirect to cart if adding failed
+            router.push('/cart');
           }
+        } else if (items.length === 0) {
+          // Only redirect if no pending booking and cart is empty
+          toast.error('Your cart is empty');
+          router.push('/cart');
         }
       } else {
         toast.error('Please login to continue');
@@ -122,15 +128,7 @@ export default function CheckoutPage() {
       }
     };
     getUser();
-  }, [router]);
-
-  // Redirect if cart is empty
-  useEffect(() => {
-    if (items.length === 0) {
-      toast.error('Your cart is empty');
-      router.push('/cart');
-    }
-  }, [items, router]);
+  }, [router, items.length]);
 
   const totalAmount = getCartTotal();
   const totalTickets = getTotalTickets();
