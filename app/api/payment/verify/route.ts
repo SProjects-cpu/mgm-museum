@@ -113,7 +113,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Convert cart items to bookings
-    const cartItems = paymentOrder.cart_snapshot as any[];
+    const cartSnapshot = paymentOrder.cart_snapshot as any;
+    const cartItems = Array.isArray(cartSnapshot) ? cartSnapshot : (cartSnapshot?.items || []);
+    
+    if (cartItems.length === 0) {
+      console.error('No cart items found in snapshot:', paymentOrder.cart_snapshot);
+      return NextResponse.json(
+        { success: false, message: 'No items found in cart snapshot' },
+        { status: 400 }
+      );
+    }
+
     const bookings: any[] = [];
     const tickets: any[] = [];
 
