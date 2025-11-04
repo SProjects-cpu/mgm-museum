@@ -6,15 +6,39 @@ import { BookingErrorCode } from '@/lib/api/errors';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: exhibitionId } = params;
+    const { id } = await params;
     const { searchParams } = new URL(request.url);
     const date = searchParams.get('date');
     const timeSlotId = searchParams.get('timeSlotId');
 
     const supabase = getServiceSupabase();
+    
+    // Check if id is a UUID or a slug
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+    
+    let exhibitionId = id;
+    
+    // If it's a slug, fetch the exhibition ID
+    if (!isUUID) {
+      const { data: exhibition, error } = await supabase
+        .from('exhibitions')
+        .select('id')
+        .eq('slug', id)
+        .single();
+      
+      if (error || !exhibition) {
+        return errorResponse(
+          BookingErrorCode.VALIDATION_ERROR,
+          'Exhibition not found',
+          404
+        );
+      }
+      
+      exhibitionId = exhibition.id;
+    }
 
     // Check for dynamic pricing if date/timeSlotId provided
     if (date && timeSlotId) {

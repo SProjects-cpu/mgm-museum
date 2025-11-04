@@ -31,17 +31,34 @@ import {
  */
 async function handleGet(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ): Promise<NextResponse> {
-  const { id: exhibitionId } = params;
+  const { id } = await params;
 
-  // Validate exhibition ID format (UUID)
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (!uuidRegex.test(exhibitionId)) {
-    throw new BookingError(
-      BookingErrorCode.INVALID_EXHIBITION,
-      'Invalid exhibition ID format'
-    );
+  // Check if id is a UUID or a slug
+  const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+  
+  let exhibitionId = id;
+  
+  // If it's a slug, fetch the exhibition ID
+  if (!isUUID) {
+    const { createClient } = await import('@/lib/supabase/server');
+    const supabase = createClient();
+    
+    const { data: exhibition, error } = await supabase
+      .from('exhibitions')
+      .select('id')
+      .eq('slug', id)
+      .single();
+    
+    if (error || !exhibition) {
+      throw new BookingError(
+        BookingErrorCode.INVALID_EXHIBITION,
+        'Exhibition not found'
+      );
+    }
+    
+    exhibitionId = exhibition.id;
   }
 
   // Parse query parameters

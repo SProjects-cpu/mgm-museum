@@ -6,10 +6,10 @@ import { getTimeSlots, getSlotPricing } from '@/lib/api/booking-queries';
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id: exhibitionId } = params;
+    const { id } = await params;
     const { searchParams } = new URL(request.url);
     const date = searchParams.get('date');
 
@@ -32,13 +32,24 @@ export async function GET(
       );
     }
 
-    // Validate exhibition exists
+    // Check if id is a UUID or a slug
+    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
     const supabase = getServiceSupabase();
-    const { data: exhibition, error: exhibitionError } = await supabase
+    
+    let exhibitionId = id;
+    
+    // Build query based on ID type
+    let query = supabase
       .from('exhibitions')
-      .select('id, name, status')
-      .eq('id', exhibitionId)
-      .single();
+      .select('id, name, status');
+    
+    if (isUUID) {
+      query = query.eq('id', id);
+    } else {
+      query = query.eq('slug', id);
+    }
+    
+    const { data: exhibition, error: exhibitionError } = await query.single();
 
     if (exhibitionError || !exhibition) {
       return createErrorResponse(
@@ -47,6 +58,8 @@ export async function GET(
         404
       );
     }
+    
+    exhibitionId = exhibition.id;
 
     // Get available time slots with pricing
     const timeSlots = await getTimeSlots(exhibitionId, date);
