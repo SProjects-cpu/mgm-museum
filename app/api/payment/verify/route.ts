@@ -1,10 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServiceSupabase } from '@/lib/supabase/config';
+import { createClient } from '@supabase/supabase-js';
 import { verifyPaymentSignature, generateBookingReference } from '@/lib/razorpay/utils';
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = getServiceSupabase();
+    // Get authenticated user
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader) {
+      return NextResponse.json(
+        { success: false, message: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    // Create Supabase client with user's auth token
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        global: {
+          headers: {
+            Authorization: authHeader
+          }
+        }
+      }
+    );
     
     // Get request body
     const body = await request.json();
@@ -38,25 +58,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get authenticated user
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
-      return NextResponse.json(
-        { success: false, message: 'Authentication required' },
-        { status: 401 }
-      );
-    }
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    );
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
+      console.error('Auth error:', authError);
       return NextResponse.json(
         { success: false, message: 'Invalid authentication' },
         { status: 401 }
       );
     }
+
+    console.log('Verifying payment for user:', user.id);
 
     // Fetch payment order from database
     const { data: paymentOrder, error: fetchError } = await supabase
@@ -119,16 +131,9 @@ export async function POST(request: NextRequest) {
           exhibition_id: item.exhibitionId,
           show_id: item.showId,
           booking_date: item.bookingDate,
-          visitor_name: paymentOrder.payment_email || user.email,
-          visitor_email: paymentOrder.payment_email || user.email,
-          visitor_phone: paymentOrder.payment_contact,
-          adult_tickets: item.tickets?.adult || 0,
-          child_tickets: item.tickets?.child || 0,
-          student_tickets: item.tickets?.student || 0,
-          senior_tickets: item.tickets?.senior || 0,
-          total_tickets: item.totalTickets,
-          subtotal: item.subtotal || 0,
-          discount: 0,
+          guest_name: paymentOrder.payment_email || user.email,
+          guest_email: paymentOrder.payment_email || user.email,
+          guest_phone: paymentOrder.payment_contact,
           total_amount: item.subtotal || 0,
           status: 'confirmed',
           payment_status: 'paid',
