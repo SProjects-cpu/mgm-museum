@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServiceSupabase } from '@/lib/supabase/config';
+import { createClient } from '@supabase/supabase-js';
 import { 
   getRazorpayConfig,
   validateRazorpayConfig,
@@ -26,7 +26,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = getServiceSupabase();
+    // Get authenticated user
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader) {
+      return NextResponse.json(
+        { success: false, message: 'Authentication required' },
+        { status: 401 }
+      );
+    }
+
+    // Create Supabase client with user's auth token
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        global: {
+          headers: {
+            Authorization: authHeader
+          }
+        }
+      }
+    );
     
     // Get request body
     const body = await request.json();
@@ -47,25 +67,17 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get authenticated user
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
-      return NextResponse.json(
-        { success: false, message: 'Authentication required' },
-        { status: 401 }
-      );
-    }
-
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      authHeader.replace('Bearer ', '')
-    );
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
 
     if (authError || !user) {
+      console.error('Auth error:', authError);
       return NextResponse.json(
         { success: false, message: 'Invalid authentication' },
         { status: 401 }
       );
     }
+
+    console.log('Creating payment order for user:', user.id);
 
     // Validate cart items still available
     for (const item of cartItems) {
