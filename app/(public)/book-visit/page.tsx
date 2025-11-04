@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useBookingFlow } from '@/lib/hooks/useBookingFlow';
 import { BookingCalendar } from '@/components/booking/BookingCalendar';
@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ArrowLeft, ArrowRight, Calendar, Clock, Ticket, CreditCard, Loader2 } from 'lucide-react';
 import { useCartStore } from '@/lib/store/cart';
+import { supabase } from '@/lib/supabase/config';
 import { toast } from 'sonner';
 
 export default function BookVisitPage() {
@@ -17,8 +18,32 @@ export default function BookVisitPage() {
   const searchParams = useSearchParams();
   const exhibitionId = searchParams.get('exhibitionId') || '';
   const exhibitionName = searchParams.get('exhibitionName') || 'Exhibition';
+  const action = searchParams.get('action');
   const [addingToCart, setAddingToCart] = useState(false);
   const { addItem } = useCartStore();
+
+  // Handle return from login
+  useEffect(() => {
+    if (action === 'checkout') {
+      const pendingBooking = sessionStorage.getItem('pendingBooking');
+      if (pendingBooking) {
+        try {
+          const data = JSON.parse(pendingBooking);
+          // Restore booking state and proceed to checkout
+          sessionStorage.removeItem('pendingBooking');
+          toast.success('Login successful! Proceeding with your booking...');
+          
+          // Auto-trigger checkout after a brief delay
+          setTimeout(() => {
+            const checkoutBtn = document.querySelector('[data-checkout-btn]') as HTMLButtonElement;
+            if (checkoutBtn) checkoutBtn.click();
+          }, 1000);
+        } catch (error) {
+          console.error('Error restoring booking:', error);
+        }
+      }
+    }
+  }, [action]);
 
   const {
     step,
@@ -44,6 +69,24 @@ export default function BookVisitPage() {
 
     setAddingToCart(true);
     try {
+      // Check if user is logged in
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        // Store booking data in sessionStorage for after login
+        const bookingData = {
+          exhibitionId,
+          exhibitionName,
+          selectedDate: selectedDate.toISOString(),
+          selectedTimeSlot,
+          selectedTickets,
+          totalAmount,
+        };
+        sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
+        
+        toast.info('Please login to continue with your booking');
+        router.push('/login?redirect=/book-visit&action=checkout');
+        return;
+      }
       // Convert selected tickets to the format expected by cart
       const tickets = {
         adult: selectedTickets.find(t => t.ticketType.toLowerCase() === 'adult')?.quantity || 0,
@@ -300,6 +343,7 @@ export default function BookVisitPage() {
           <Button
             onClick={step === 'payment' ? handleProceedToCheckout : goToNextStep}
             disabled={(step !== 'payment' && !canProceed) || (step === 'payment' && addingToCart)}
+            data-checkout-btn={step === 'payment' ? 'true' : undefined}
           >
             {addingToCart ? (
               <>
