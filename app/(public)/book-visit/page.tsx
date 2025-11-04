@@ -299,7 +299,7 @@ export default function BookVisitPage() {
 
           <Button
             onClick={step === 'payment' ? handleProceedToCheckout : goToNextStep}
-            disabled={!canProceed || (step === 'payment' && addingToCart)}
+            disabled={(step !== 'payment' && !canProceed) || (step === 'payment' && addingToCart)}
           >
             {addingToCart ? (
               <>
