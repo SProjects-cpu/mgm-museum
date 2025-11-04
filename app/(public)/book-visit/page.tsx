@@ -55,6 +55,9 @@ export default function BookVisitPage() {
 
             toast.success('Login successful! Processing your booking...');
             
+            // Wait a bit for session to be fully established
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
             // Directly add to cart instead of restoring state and clicking button
             try {
               const tickets = {
