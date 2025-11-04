@@ -46,7 +46,7 @@ export default function LoginPage() {
 
     try {
       if (isSignUp) {
-        // Sign up
+        // Sign up with email confirmation disabled
         const { data, error } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password,
@@ -54,12 +54,18 @@ export default function LoginPage() {
             data: {
               name: formData.name,
             },
+            emailRedirectTo: `${window.location.origin}/login?redirect=${redirect}&action=${action}`,
           },
         });
 
         if (error) throw error;
 
-        if (data.user) {
+        // Check if email confirmation is required
+        if (data.user && !data.session) {
+          toast.info('Please check your email to confirm your account');
+          setIsSignUp(false); // Switch to login mode
+        } else if (data.user && data.session) {
+          // Auto-login successful (email confirmation disabled)
           toast.success('Account created successfully!');
           handleRedirect();
         }

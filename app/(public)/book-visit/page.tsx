@@ -24,26 +24,45 @@ export default function BookVisitPage() {
 
   // Handle return from login
   useEffect(() => {
-    if (action === 'checkout') {
-      const pendingBooking = sessionStorage.getItem('pendingBooking');
-      if (pendingBooking) {
-        try {
-          const data = JSON.parse(pendingBooking);
-          // Restore booking state and proceed to checkout
-          sessionStorage.removeItem('pendingBooking');
-          toast.success('Login successful! Proceeding with your booking...');
-          
-          // Auto-trigger checkout after a brief delay
-          setTimeout(() => {
-            const checkoutBtn = document.querySelector('[data-checkout-btn]') as HTMLButtonElement;
-            if (checkoutBtn) checkoutBtn.click();
-          }, 1000);
-        } catch (error) {
-          console.error('Error restoring booking:', error);
+    const handlePostLogin = async () => {
+      if (action === 'checkout') {
+        const pendingBooking = sessionStorage.getItem('pendingBooking');
+        if (pendingBooking) {
+          try {
+            const data = JSON.parse(pendingBooking);
+            
+            // Check if user is now logged in
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+              toast.error('Please login to continue');
+              return;
+            }
+
+            // Restore booking state
+            if (data.selectedDate) selectDate(new Date(data.selectedDate));
+            if (data.selectedTimeSlot) selectTimeSlot(data.selectedTimeSlot);
+            if (data.selectedTickets) selectTickets(data.selectedTickets);
+            
+            sessionStorage.removeItem('pendingBooking');
+            toast.success('Login successful! Proceeding with your booking...');
+            
+            // Auto-trigger checkout after state is restored
+            setTimeout(() => {
+              const checkoutBtn = document.querySelector('[data-checkout-btn]') as HTMLButtonElement;
+              if (checkoutBtn) {
+                checkoutBtn.click();
+              }
+            }, 1500);
+          } catch (error) {
+            console.error('Error restoring booking:', error);
+            toast.error('Failed to restore booking. Please try again.');
+          }
         }
       }
-    }
-  }, [action]);
+    };
+
+    handlePostLogin();
+  }, [action, selectDate, selectTimeSlot, selectTickets]);
 
   const {
     step,
