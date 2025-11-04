@@ -1,12 +1,11 @@
 {
-  "name": "MGM APJ Abdul Kalam Astrospace Science Centre",
-  "short_name": "MGM Science Centre",
-  "description": "Explore interactive science exhibitions, planetarium shows, and hands-on experiences at MGM Astrospace Science Centre, Aurangabad",
+  "name": "MGM Museum Booking System",
+  "short_name": "MGM Museum",
+  "description": "Book your visit to MGM Museum",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#3498db",
-  "orientation": "portrait-primary",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
   "icons": [
     {
       "src": "/icon-192x192.png",
@@ -15,63 +14,10 @@
       "purpose": "any maskable"
     },
     {
-      "src": "/icon-256x256.png",
-      "sizes": "256x256",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icon-384x384.png",
-      "sizes": "384x384",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
       "src": "/icon-512x512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     }
-  ],
-  "categories": ["education", "science", "museum"],
-  "lang": "en-IN",
-  "dir": "ltr",
-  "scope": "/",
-  "shortcuts": [
-    {
-      "name": "Book Tickets",
-      "short_name": "Book",
-      "description": "Book exhibition tickets",
-      "url": "/exhibitions",
-      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
-    },
-    {
-      "name": "Planetarium Shows",
-      "short_name": "Shows",
-      "description": "View planetarium shows",
-      "url": "/shows",
-      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "/screenshot-wide.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "Homepage of MGM Science Centre"
-    },
-    {
-      "src": "/screenshot-mobile.png",
-      "sizes": "750x1334",
-      "type": "image/png",
-      "label": "Mobile view of exhibitions"
-    }
   ]
 }
-
-
-
-
-
-
