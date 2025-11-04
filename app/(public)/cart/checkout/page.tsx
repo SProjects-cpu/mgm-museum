@@ -52,7 +52,7 @@ export default function CheckoutPage() {
     };
   }, []);
 
-  // Get user data
+  // Get user data and handle pending booking
   useEffect(() => {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -62,6 +62,60 @@ export default function CheckoutPage() {
           ...prev,
           email: user.email || '',
         }));
+        
+        // Check for pending booking from book-visit flow
+        const pendingBooking = sessionStorage.getItem('pendingBooking');
+        if (pendingBooking) {
+          try {
+            const data = JSON.parse(pendingBooking);
+            toast.loading('Adding booking to cart...', { id: 'add-booking' });
+            
+            // Wait for session to be ready
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            const tickets = {
+              adult: data.selectedTickets.find((t: any) => t.ticketType.toLowerCase() === 'adult')?.quantity || 0,
+              child: data.selectedTickets.find((t: any) => t.ticketType.toLowerCase() === 'child')?.quantity || 0,
+              student: data.selectedTickets.find((t: any) => t.ticketType.toLowerCase() === 'student')?.quantity || 0,
+              senior: data.selectedTickets.find((t: any) => t.ticketType.toLowerCase() === 'senior')?.quantity || 0,
+            };
+
+            const totalTickets = Object.values(tickets).reduce((sum: number, qty) => sum + (qty as number), 0);
+
+            const fullTimeSlot = {
+              id: data.selectedTimeSlot.id,
+              slotDate: new Date(data.selectedDate).toISOString().split('T')[0],
+              startTime: data.selectedTimeSlot.startTime,
+              endTime: data.selectedTimeSlot.endTime,
+              capacity: data.selectedTimeSlot.totalCapacity,
+              currentBookings: data.selectedTimeSlot.totalCapacity - data.selectedTimeSlot.availableCapacity,
+              bufferCapacity: 5,
+              availableCapacity: data.selectedTimeSlot.availableCapacity,
+              active: true,
+              itemType: 'exhibition' as const,
+              itemId: data.exhibitionId,
+              itemName: data.exhibitionName,
+            };
+
+            await useCartStore.getState().addItem({
+              exhibitionId: data.exhibitionId,
+              exhibitionName: data.exhibitionName,
+              timeSlotId: data.selectedTimeSlot.id,
+              timeSlot: fullTimeSlot,
+              bookingDate: new Date(data.selectedDate).toISOString().split('T')[0],
+              tickets: tickets,
+              totalTickets: totalTickets,
+              subtotal: data.totalAmount,
+            });
+
+            sessionStorage.removeItem('pendingBooking');
+            toast.success('Booking added to cart!', { id: 'add-booking' });
+          } catch (error: any) {
+            console.error('Error adding pending booking:', error);
+            toast.error(error.message || 'Failed to add booking to cart', { id: 'add-booking' });
+            sessionStorage.removeItem('pendingBooking');
+          }
+        }
       } else {
         toast.error('Please login to continue');
         router.replace('/login?redirect=/cart/checkout');

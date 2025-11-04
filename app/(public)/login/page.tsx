@@ -25,6 +25,16 @@ export default function LoginPage() {
   });
 
   const handleRedirect = () => {
+    console.log('Redirecting to:', redirect, 'with action:', action);
+    
+    // Special handling for add-from-booking action
+    if (action === 'add-from-booking') {
+      // Just go to the redirect URL (cart/checkout)
+      // The checkout page will handle adding pending booking
+      router.replace(redirect);
+      return;
+    }
+    
     // Only append action if redirect doesn't already have query params
     // This prevents conflicts with cart checkout flow
     let fullRedirect = redirect;
@@ -33,7 +43,7 @@ export default function LoginPage() {
       fullRedirect = `${redirect}?action=${action}`;
     }
     
-    console.log('Redirecting to:', fullRedirect);
+    console.log('Final redirect:', fullRedirect);
     // Use router.replace to prevent back button issues
     router.replace(fullRedirect);
   };
