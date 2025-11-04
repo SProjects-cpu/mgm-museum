@@ -1,83 +1,89 @@
-// @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { getServiceSupabase } from '@/lib/supabase/config';
 
-// GET - Fetch user's booking history
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    
-    // Get authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const supabase = getServiceSupabase();
 
-    if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    // Get authenticated user
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader) {
+      return NextResponse.json(
+        { success: false, message: 'Authentication required' },
+        { status: 401 }
+      );
     }
 
-    const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status');
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
-    const offset = (page - 1) * limit;
+    const { data: { user }, error: authError } = await supabase.auth.getUser(
+      authHeader.replace('Bearer ', '')
+    );
 
-    // Build query
-    let query = supabase
+    if (authError || !user) {
+      return NextResponse.json(
+        { success: false, message: 'Invalid authentication' },
+        { status: 401 }
+      );
+    }
+
+    // Fetch user's bookings
+    const { data: bookings, error } = await supabase
       .from('bookings')
       .select(`
         *,
-        time_slot:time_slots(*),
         exhibition:exhibitions(id, name, category),
         show:shows(id, name, type),
-        tickets(id, ticket_number, qr_code_data, status)
-      `, { count: 'exact' })
-      .or(`visitor_email.eq.${user.email},user_id.eq.${user.id}`)
-      .order('booking_date', { ascending: false })
-      .range(offset, offset + limit - 1);
+        time_slot:time_slots(start_time, end_time),
+        tickets(id, ticket_number, qr_code, status)
+      `)
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
 
-    // Filter by status if provided
-    if (status) {
-      query = query.eq('status', status);
+    if (error) {
+      console.error('Error fetching user bookings:', error);
+      return NextResponse.json(
+        { success: false, message: 'Failed to fetch bookings' },
+        { status: 500 }
+      );
     }
 
-    const { data: bookings, error: bookingsError, count } = await query;
-
-    if (bookingsError) {
-      console.error('Bookings fetch error:', bookingsError);
-      return NextResponse.json({ error: 'Failed to fetch bookings' }, { status: 500 });
-    }
-
-    // Categorize bookings
-    const now = new Date();
-    const categorized = {
-      upcoming: [],
-      completed: [],
-      cancelled: [],
-      all: bookings || []
-    };
-
-    bookings?.forEach(booking => {
-      const bookingDate = new Date(booking.booking_date);
-      
-      if (booking.status === 'cancelled') {
-        categorized.cancelled.push(booking);
-      } else if (bookingDate > now) {
-        categorized.upcoming.push(booking);
-      } else {
-        categorized.completed.push(booking);
-      }
-    });
+    // Format bookings for response
+    const formattedBookings = bookings?.map((booking) => ({
+      id: booking.id,
+      bookingReference: booking.booking_reference,
+      exhibitionId: booking.exhibition_id,
+      showId: booking.show_id,
+      exhibitionName: booking.exhibition?.name,
+      showName: booking.show?.name,
+      bookingDate: booking.booking_date,
+      timeSlot: booking.time_slot
+        ? `${booking.time_slot.start_time} - ${booking.time_slot.end_time}`
+        : 'N/A',
+      totalTickets: booking.total_tickets,
+      adultTickets: booking.adult_tickets || 0,
+      childTickets: booking.child_tickets || 0,
+      studentTickets: booking.student_tickets || 0,
+      seniorTickets: booking.senior_tickets || 0,
+      totalAmount: parseFloat(booking.total_amount),
+      status: booking.status,
+      paymentStatus: booking.payment_status,
+      paymentMethod: booking.payment_method,
+      paymentId: booking.payment_id,
+      createdAt: booking.created_at,
+      hasTicket: booking.tickets && booking.tickets.length > 0,
+      ticketUrl: booking.tickets && booking.tickets.length > 0
+        ? `/api/tickets/generate?bookingId=${booking.id}`
+        : null,
+    }));
 
     return NextResponse.json({
-      bookings: categorized,
-      pagination: {
-        page,
-        limit,
-        total: count || 0,
-        totalPages: Math.ceil((count || 0) / limit)
-      }
+      success: true,
+      bookings: formattedBookings || [],
     });
   } catch (error: any) {
-    console.error('User bookings error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    console.error('Error in user bookings API:', error);
+    return NextResponse.json(
+      { success: false, message: error.message || 'Internal server error' },
+      { status: 500 }
+    );
   }
 }

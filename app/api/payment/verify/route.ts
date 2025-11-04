@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase/config';
-import { verifyPaymentSignature } from '@/lib/razorpay/utils';
+import { verifyPaymentSignature, generateBookingReference } from '@/lib/razorpay/utils';
 
 export async function POST(request: NextRequest) {
   try {
@@ -103,10 +103,11 @@ export async function POST(request: NextRequest) {
     // Convert cart items to bookings
     const cartItems = paymentOrder.cart_snapshot as any[];
     const bookings: any[] = [];
+    const tickets: any[] = [];
 
     for (const item of cartItems) {
-      // Generate booking reference
-      const bookingReference = `BK${Date.now()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+      // Generate booking reference using utility function
+      const bookingReference = generateBookingReference();
 
       // Create booking
       const { data: booking, error: bookingError } = await supabase
@@ -121,10 +122,10 @@ export async function POST(request: NextRequest) {
           visitor_name: paymentOrder.payment_email || user.email,
           visitor_email: paymentOrder.payment_email || user.email,
           visitor_phone: paymentOrder.payment_contact,
-          adult_tickets: item.tickets.adult || 0,
-          child_tickets: item.tickets.child || 0,
-          student_tickets: item.tickets.student || 0,
-          senior_tickets: item.tickets.senior || 0,
+          adult_tickets: item.tickets?.adult || 0,
+          child_tickets: item.tickets?.child || 0,
+          student_tickets: item.tickets?.student || 0,
+          senior_tickets: item.tickets?.senior || 0,
           total_tickets: item.totalTickets,
           subtotal: item.subtotal || 0,
           discount: 0,
@@ -144,6 +145,23 @@ export async function POST(request: NextRequest) {
       }
 
       bookings.push(booking);
+
+      // Create ticket record (PDF generation will be done separately)
+      const ticketNumber = `TKT${Date.now()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+      const { data: ticket, error: ticketError } = await supabase
+        .from('tickets')
+        .insert({
+          booking_id: booking.id,
+          ticket_number: ticketNumber,
+          qr_code: bookingReference, // QR code will contain booking reference
+          status: 'active',
+        })
+        .select()
+        .single();
+
+      if (!ticketError && ticket) {
+        tickets.push(ticket);
+      }
     }
 
     // Clear cart items for user
@@ -155,6 +173,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       bookings,
+      tickets,
       message: 'Payment verified and bookings created successfully',
     });
   } catch (error: any) {

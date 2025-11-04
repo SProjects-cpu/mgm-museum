@@ -1,35 +1,53 @@
-// @ts-nocheck
-import Razorpay from 'razorpay';
-import crypto from 'crypto';
-import { getServiceSupabase } from '@/lib/supabase/config';
+/**
+ * Razorpay Client Module
+ * Provides Razorpay instance creation and API operations
+ * Supports both database-stored and environment variable credentials
+ */
 
-// Get Razorpay credentials from database or environment
-async function getRazorpayCredentials(environment: string = 'test') {
+import Razorpay from 'razorpay';
+import { getServiceSupabase } from '@/lib/supabase/config';
+import { getRazorpayConfig } from './config';
+
+interface RazorpayCredentials {
+  key_id: string;
+  key_secret: string;
+  webhook_secret: string;
+}
+
+/**
+ * Get Razorpay credentials from database or environment variables
+ * Priority: Database > Environment Variables
+ * @param environment - 'test' or 'production'
+ * @returns Razorpay credentials
+ */
+async function getRazorpayCredentials(environment: string = 'test'): Promise<RazorpayCredentials> {
   try {
     const supabase = getServiceSupabase();
     const encryptionKey = process.env.DATABASE_ENCRYPTION_KEY;
 
     if (!encryptionKey) {
       // Fallback to environment variables
+      const config = getRazorpayConfig();
       return {
-        key_id: process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-        key_secret: process.env.RAZORPAY_KEY_SECRET,
-        webhook_secret: process.env.RAZORPAY_WEBHOOK_SECRET
+        key_id: config.keyId,
+        key_secret: config.keySecret,
+        webhook_secret: config.webhookSecret,
       };
     }
 
     // Try to fetch from database
     const { data, error } = await supabase.rpc('get_active_razorpay_credentials', {
       env: environment,
-      encryption_key: encryptionKey
+      encryption_key: encryptionKey,
     });
 
     if (error || !data || data.length === 0) {
       // Fallback to environment variables
+      const config = getRazorpayConfig();
       return {
-        key_id: process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-        key_secret: process.env.RAZORPAY_KEY_SECRET,
-        webhook_secret: process.env.RAZORPAY_WEBHOOK_SECRET
+        key_id: config.keyId,
+        key_secret: config.keySecret,
+        webhook_secret: config.webhookSecret,
       };
     }
 
@@ -37,25 +55,31 @@ async function getRazorpayCredentials(environment: string = 'test') {
     return {
       key_id: credentials.key_id,
       key_secret: credentials.key_secret,
-      webhook_secret: credentials.webhook_secret
+      webhook_secret: credentials.webhook_secret,
     };
   } catch (error) {
     console.error('Error fetching credentials:', error);
     // Fallback to environment variables
+    const config = getRazorpayConfig();
     return {
-      key_id: process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-      key_secret: process.env.RAZORPAY_KEY_SECRET,
-      webhook_secret: process.env.RAZORPAY_WEBHOOK_SECRET
+      key_id: config.keyId,
+      key_secret: config.keySecret,
+      webhook_secret: config.webhookSecret,
     };
   }
 }
 
-// Initialize Razorpay instance (server-side only)
-export async function getRazorpayInstance(environment: string = 'test') {
+/**
+ * Initialize Razorpay instance (server-side only)
+ * @param environment - 'test' or 'production'
+ * @returns Razorpay instance
+ * @throws Error if credentials are not configured
+ */
+export async function getRazorpayInstance(environment: string = 'test'): Promise<Razorpay> {
   const credentials = await getRazorpayCredentials(environment);
-  
+
   if (!credentials.key_id || !credentials.key_secret) {
-    throw new Error('Razorpay credentials not configured');
+    throw new Error('Razorpay credentials not configured. Please set NEXT_PUBLIC_RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET environment variables.');
   }
 
   return new Razorpay({
@@ -64,86 +88,75 @@ export async function getRazorpayInstance(environment: string = 'test') {
   });
 }
 
-// Verify payment signature
-export function verifyPaymentSignature(
-  orderId: string,
-  paymentId: string,
-  signature: string
-): boolean {
-  try {
-    const secret = process.env.RAZORPAY_KEY_SECRET!;
-    const body = orderId + '|' + paymentId;
-    
-    const expectedSignature = crypto
-      .createHmac('sha256', secret)
-      .update(body)
-      .digest('hex');
-    
-    return expectedSignature === signature;
-  } catch (error) {
-    console.error('Error verifying payment signature:', error);
-    return false;
-  }
-}
-
-// Verify webhook signature
-export function verifyWebhookSignature(
-  payload: string,
-  signature: string
-): boolean {
-  try {
-    const secret = process.env.RAZORPAY_WEBHOOK_SECRET!;
-    
-    const expectedSignature = crypto
-      .createHmac('sha256', secret)
-      .update(payload)
-      .digest('hex');
-    
-    return expectedSignature === signature;
-  } catch (error) {
-    console.error('Error verifying webhook signature:', error);
-    return false;
-  }
-}
-
-// Create Razorpay order
+/**
+ * Create Razorpay order
+ * @param amount - Amount in paise (smallest currency unit)
+ * @param currency - Currency code (default: INR)
+ * @param receipt - Unique receipt identifier
+ * @param notes - Optional metadata
+ * @param environment - 'test' or 'production'
+ * @returns Razorpay order object
+ */
 export async function createRazorpayOrder(
-  amount: number, // in paise
+  amount: number,
   currency: string = 'INR',
   receipt: string,
   notes?: Record<string, string>,
   environment: string = 'test'
 ) {
   const razorpay = await getRazorpayInstance(environment);
-  
+
   const orderOptions = {
     amount,
     currency,
     receipt,
     notes,
   };
-  
+
   return await razorpay.orders.create(orderOptions);
 }
 
-// Fetch payment details
+/**
+ * Fetch payment details from Razorpay
+ * @param paymentId - Razorpay payment ID
+ * @param environment - 'test' or 'production'
+ * @returns Payment details
+ */
 export async function fetchPaymentDetails(paymentId: string, environment: string = 'test') {
   const razorpay = await getRazorpayInstance(environment);
   return await razorpay.payments.fetch(paymentId);
 }
 
-// Create refund
+/**
+ * Create refund for a payment
+ * @param paymentId - Razorpay payment ID
+ * @param amount - Amount in paise (optional, full refund if not provided)
+ * @param notes - Optional metadata
+ * @param environment - 'test' or 'production'
+ * @returns Refund object
+ */
 export async function createRefund(
   paymentId: string,
-  amount?: number, // in paise, optional for full refund
+  amount?: number,
   notes?: Record<string, string>,
   environment: string = 'test'
 ) {
   const razorpay = await getRazorpayInstance(environment);
-  
+
   const refundOptions: any = {};
   if (amount) refundOptions.amount = amount;
   if (notes) refundOptions.notes = notes;
-  
+
   return await razorpay.payments.refund(paymentId, refundOptions);
+}
+
+/**
+ * Fetch order details from Razorpay
+ * @param orderId - Razorpay order ID
+ * @param environment - 'test' or 'production'
+ * @returns Order details
+ */
+export async function fetchOrderDetails(orderId: string, environment: string = 'test') {
+  const razorpay = await getRazorpayInstance(environment);
+  return await razorpay.orders.fetch(orderId);
 }

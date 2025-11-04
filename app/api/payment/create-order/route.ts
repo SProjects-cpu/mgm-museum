@@ -1,12 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase/config';
 import { 
-  RAZORPAY_KEY_ID, 
-  RAZORPAY_KEY_SECRET, 
+  getRazorpayConfig,
+  validateRazorpayConfig,
   DEFAULT_CURRENCY,
-  validateRazorpayConfig 
 } from '@/lib/razorpay/config';
-import { formatAmountForRazorpay, generateReceipt } from '@/lib/razorpay/utils';
+import { 
+  formatAmountForRazorpay, 
+  generateReceipt,
+  parseRazorpayError,
+} from '@/lib/razorpay/utils';
+import { createRazorpayOrder } from '@/lib/razorpay/client';
 
 export async function POST(request: NextRequest) {
   try {
@@ -109,35 +113,29 @@ export async function POST(request: NextRequest) {
     // Create Razorpay order
     const amountInPaise = formatAmountForRazorpay(totalAmount);
     const receipt = generateReceipt('booking');
+    const config = getRazorpayConfig();
 
-    const razorpayResponse = await fetch('https://api.razorpay.com/v1/orders', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${RAZORPAY_KEY_ID}:${RAZORPAY_KEY_SECRET}`).toString('base64')}`,
-      },
-      body: JSON.stringify({
-        amount: amountInPaise,
-        currency: DEFAULT_CURRENCY,
+    let razorpayOrder;
+    try {
+      razorpayOrder = await createRazorpayOrder(
+        amountInPaise,
+        DEFAULT_CURRENCY,
         receipt,
-        notes: {
+        {
           user_id: user.id,
           user_email: userDetails.email,
-          items_count: cartItems.length,
+          items_count: cartItems.length.toString(),
         },
-      }),
-    });
-
-    if (!razorpayResponse.ok) {
-      const errorData = await razorpayResponse.json();
-      console.error('Razorpay order creation failed:', errorData);
+        config.environment
+      );
+    } catch (error: any) {
+      console.error('Razorpay order creation failed:', error);
+      const errorMessage = parseRazorpayError(error);
       return NextResponse.json(
-        { success: false, message: 'Failed to create payment order' },
+        { success: false, message: errorMessage },
         { status: 500 }
       );
     }
-
-    const razorpayOrder = await razorpayResponse.json();
 
     // Save payment order to database
     const { data: paymentOrder, error: insertError } = await supabase
@@ -169,7 +167,7 @@ export async function POST(request: NextRequest) {
       amount: totalAmount,
       amountInPaise,
       currency: DEFAULT_CURRENCY,
-      razorpayKeyId: RAZORPAY_KEY_ID,
+      razorpayKeyId: config.keyId,
       userDetails: {
         name: userDetails.name,
         email: userDetails.email,
