@@ -53,31 +53,68 @@ export default function BookVisitPage() {
               return;
             }
 
-            // Restore booking state
-            if (data.selectedDate) selectDate(new Date(data.selectedDate));
-            if (data.selectedTimeSlot) selectTimeSlot(data.selectedTimeSlot);
-            if (data.selectedTickets) selectTickets(data.selectedTickets);
+            toast.success('Login successful! Processing your booking...');
             
-            sessionStorage.removeItem('pendingBooking');
-            toast.success('Login successful! Proceeding with your booking...');
-            
-            // Auto-trigger checkout after state is restored
-            setTimeout(async () => {
-              const checkoutBtn = document.querySelector('[data-checkout-btn]') as HTMLButtonElement;
-              if (checkoutBtn) {
-                checkoutBtn.click();
-              }
-            }, 1500);
+            // Directly add to cart instead of restoring state and clicking button
+            try {
+              const tickets = {
+                adult: data.selectedTickets.find((t: any) => t.ticketType.toLowerCase() === 'adult')?.quantity || 0,
+                child: data.selectedTickets.find((t: any) => t.ticketType.toLowerCase() === 'child')?.quantity || 0,
+                student: data.selectedTickets.find((t: any) => t.ticketType.toLowerCase() === 'student')?.quantity || 0,
+                senior: data.selectedTickets.find((t: any) => t.ticketType.toLowerCase() === 'senior')?.quantity || 0,
+              };
+
+              const totalTickets = Object.values(tickets).reduce((sum: number, qty) => sum + (qty as number), 0);
+
+              const fullTimeSlot = {
+                id: data.selectedTimeSlot.id,
+                slotDate: new Date(data.selectedDate).toISOString().split('T')[0],
+                startTime: data.selectedTimeSlot.startTime,
+                endTime: data.selectedTimeSlot.endTime,
+                capacity: data.selectedTimeSlot.totalCapacity,
+                currentBookings: data.selectedTimeSlot.totalCapacity - data.selectedTimeSlot.availableCapacity,
+                bufferCapacity: 5,
+                availableCapacity: data.selectedTimeSlot.availableCapacity,
+                active: true,
+                itemType: 'exhibition' as const,
+                itemId: data.exhibitionId,
+                itemName: data.exhibitionName,
+              };
+
+              await addItem({
+                exhibitionId: data.exhibitionId,
+                exhibitionName: data.exhibitionName,
+                timeSlotId: data.selectedTimeSlot.id,
+                timeSlot: fullTimeSlot,
+                bookingDate: new Date(data.selectedDate).toISOString().split('T')[0],
+                tickets: tickets,
+                totalTickets: totalTickets,
+                subtotal: data.totalAmount,
+              });
+
+              sessionStorage.removeItem('pendingBooking');
+              toast.success('Added to cart! Redirecting to checkout...');
+              
+              // Redirect directly to checkout
+              setTimeout(() => {
+                router.push('/cart/checkout');
+              }, 1000);
+            } catch (error: any) {
+              console.error('Error adding to cart:', error);
+              toast.error(error.message || 'Failed to add to cart');
+              sessionStorage.removeItem('pendingBooking');
+            }
           } catch (error) {
             console.error('Error restoring booking:', error);
             toast.error('Failed to restore booking. Please try again.');
+            sessionStorage.removeItem('pendingBooking');
           }
         }
       }
     };
 
     handlePostLogin();
-  }, [action, exhibitionId, selectDate, selectTimeSlot, selectTickets]);
+  }, [action, exhibitionId, addItem, router]);
 
   const handleProceedToCheckout = async () => {
     if (!selectedDate || !selectedTimeSlot || selectedTickets.length === 0) {
@@ -101,7 +138,8 @@ export default function BookVisitPage() {
         };
         sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
         
-        toast.info('Please login to continue with your booking');
+        toast.info('Please login to add items to cart');
+        // Redirect to login, then back to this page to complete the add-to-cart action
         const redirectUrl = `/book-visit?exhibitionId=${exhibitionId}&exhibitionName=${encodeURIComponent(exhibitionName)}&action=checkout`;
         router.push(`/login?redirect=${encodeURIComponent(redirectUrl)}`);
         setAddingToCart(false);
