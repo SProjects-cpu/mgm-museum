@@ -116,6 +116,12 @@ export async function POST(request: NextRequest) {
     const cartSnapshot = paymentOrder.cart_snapshot as any;
     const cartItems = Array.isArray(cartSnapshot) ? cartSnapshot : (cartSnapshot?.items || []);
     
+    console.log('Cart snapshot structure:', {
+      isArray: Array.isArray(cartSnapshot),
+      cartItemsLength: cartItems.length,
+      firstItem: cartItems[0],
+    });
+    
     if (cartItems.length === 0) {
       console.error('No cart items found in snapshot:', paymentOrder.cart_snapshot);
       return NextResponse.json(
@@ -131,6 +137,13 @@ export async function POST(request: NextRequest) {
       // Generate booking reference using utility function
       const bookingReference = generateBookingReference();
 
+      console.log('Creating booking for item:', {
+        timeSlotId: item.timeSlotId,
+        exhibitionId: item.exhibitionId,
+        showId: item.showId,
+        bookingDate: item.bookingDate,
+      });
+
       // Create booking
       const { data: booking, error: bookingError } = await supabase
         .from('bookings')
@@ -138,12 +151,12 @@ export async function POST(request: NextRequest) {
           booking_reference: bookingReference,
           user_id: user.id,
           time_slot_id: item.timeSlotId,
-          exhibition_id: item.exhibitionId,
-          show_id: item.showId,
+          exhibition_id: item.exhibitionId || null,
+          show_id: item.showId || null,
           booking_date: item.bookingDate,
           guest_name: paymentOrder.payment_email || user.email,
           guest_email: paymentOrder.payment_email || user.email,
-          guest_phone: paymentOrder.payment_contact,
+          guest_phone: paymentOrder.payment_contact || null,
           total_amount: item.subtotal || 0,
           status: 'confirmed',
           payment_status: 'paid',
@@ -155,10 +168,14 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (bookingError) {
-        console.error('Failed to create booking:', bookingError);
+        console.error('Failed to create booking:', {
+          error: bookingError,
+          item: item,
+        });
         continue;
       }
 
+      console.log('Booking created successfully:', booking.id);
       bookings.push(booking);
 
       // Create ticket record (PDF generation will be done separately)
@@ -184,6 +201,20 @@ export async function POST(request: NextRequest) {
       .from('cart_items')
       .delete()
       .eq('user_id', user.id);
+
+    console.log('Payment verification complete:', {
+      bookingsCreated: bookings.length,
+      ticketsCreated: tickets.length,
+      bookingIds: bookings.map(b => b.id),
+    });
+
+    if (bookings.length === 0) {
+      console.error('No bookings were created despite successful payment');
+      return NextResponse.json(
+        { success: false, message: 'Failed to create bookings. Please contact support.' },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,

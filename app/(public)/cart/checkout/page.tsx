@@ -360,6 +360,14 @@ export default function CheckoutPage() {
         throw new Error(data.message || 'Payment verification failed');
       }
 
+      console.log('Payment verification response:', data);
+
+      // Validate bookings exist
+      if (!data.bookings || data.bookings.length === 0) {
+        console.error('No bookings returned from payment verification:', data);
+        throw new Error('No bookings were created. Please contact support.');
+      }
+
       toast.success('Payment successful! Redirecting...', { id: 'verify-payment' });
       
       // Clear cart after successful payment
@@ -367,6 +375,7 @@ export default function CheckoutPage() {
       
       // Redirect to confirmation page
       const bookingIds = data.bookings.map((b: any) => b.id).join(',');
+      console.log('Redirecting to confirmation with booking IDs:', bookingIds);
       router.push(`/bookings/confirmation?ids=${bookingIds}`);
     } catch (error: any) {
       console.error('Payment verification error:', error);
