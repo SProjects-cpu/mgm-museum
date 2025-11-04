@@ -11,7 +11,7 @@ import Link from "next/link";
 import { motion } from "framer-motion";
 import { formatCurrency } from "@/lib/utils";
 import { EXHIBITION_CATEGORY_LABELS } from "@/types";
-// import { useRealtimeSync, useTableSync } from "@/lib/contexts/realtime-sync-context"; // DISABLED
+import { useRealtimeSync, useTableSync } from "@/lib/contexts/realtime-sync-context";
 import { toast } from "sonner";
 
 interface Exhibition {
@@ -32,8 +32,7 @@ export function ExhibitionsClient() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  // const { isConnected } = useRealtimeSync(); // DISABLED
-  const isConnected = false;
+  const { isConnected } = useRealtimeSync();
 
   const categories = [
     { id: "all", label: "All Exhibitions" },

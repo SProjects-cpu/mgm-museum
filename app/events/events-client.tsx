@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { formatDate } from "@/lib/utils";
-// import { useRealtimeSync, useTableSync } from "@/lib/contexts/realtime-sync-context"; // DISABLED
+import { useRealtimeSync, useTableSync } from "@/lib/contexts/realtime-sync-context";
 import { toast } from "sonner";
 
 interface Event {
@@ -41,8 +41,7 @@ export function EventsClient() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  // const { isConnected } = useRealtimeSync(); // DISABLED
-  const isConnected = false;
+  const { isConnected } = useRealtimeSync();
 
   // Fetch events from API
   const fetchEvents = useCallback(async () => {
