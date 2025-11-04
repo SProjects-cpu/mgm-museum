@@ -66,10 +66,16 @@ export const useCartStore = create<CartStore>()(
           const { data: { user } } = await supabase.auth.getUser();
 
           if (user) {
+            // Get auth session
+            const { data: { session } } = await supabase.auth.getSession();
+            
             // Call API to reserve seat and save to database
             const response = await fetch('/api/cart/add', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': session ? `Bearer ${session.access_token}` : '',
+              },
               body: JSON.stringify({
                 timeSlotId: item.timeSlotId,
                 bookingDate: item.bookingDate,
@@ -124,10 +130,16 @@ export const useCartStore = create<CartStore>()(
           const { data: { user } } = await supabase.auth.getUser();
 
           if (user) {
+            // Get auth session
+            const { data: { session } } = await supabase.auth.getSession();
+            
             // Call API to release seat and remove from database
             const response = await fetch('/api/cart/remove', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': session ? `Bearer ${session.access_token}` : '',
+              },
               body: JSON.stringify({
                 itemId: item.id,
                 timeSlotId: item.timeSlotId,
@@ -164,10 +176,16 @@ export const useCartStore = create<CartStore>()(
           const { data: { user } } = await supabase.auth.getUser();
 
           if (user) {
+            // Get auth session
+            const { data: { session } } = await supabase.auth.getSession();
+            
             // Call API to release all seats and clear database
             const response = await fetch('/api/cart/clear', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': session ? `Bearer ${session.access_token}` : '',
+              },
             });
 
             if (!response.ok) {
@@ -198,10 +216,16 @@ export const useCartStore = create<CartStore>()(
             return;
           }
 
+          // Get auth session
+          const { data: { session } } = await supabase.auth.getSession();
+          
           // Call API to sync guest cart to server
           const response = await fetch('/api/cart/sync', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+              'Content-Type': 'application/json',
+              'Authorization': session ? `Bearer ${session.access_token}` : '',
+            },
             body: JSON.stringify({ items }),
           });
 
@@ -237,7 +261,19 @@ export const useCartStore = create<CartStore>()(
         try {
           set({ isLoading: true, error: null });
 
-          const response = await fetch('/api/cart/load');
+          // Get auth session
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session) {
+            // User not authenticated, skip loading
+            set({ isLoading: false });
+            return;
+          }
+
+          const response = await fetch('/api/cart/load', {
+            headers: {
+              'Authorization': `Bearer ${session.access_token}`,
+            },
+          });
           const data = await response.json();
 
           if (!response.ok) {
