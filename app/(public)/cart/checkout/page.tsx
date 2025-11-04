@@ -70,8 +70,14 @@ export default function CheckoutPage() {
             const data = JSON.parse(pendingBooking);
             toast.loading('Adding booking to cart...', { id: 'add-booking' });
             
-            // Wait for session to be ready
-            await new Promise(resolve => setTimeout(resolve, 500));
+            // Wait longer for session to be fully established and propagated
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            
+            // Verify session is ready
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+              throw new Error('Session not ready. Please refresh and try again.');
+            }
             
             const tickets = {
               adult: data.selectedTickets.find((t: any) => t.ticketType.toLowerCase() === 'adult')?.quantity || 0,
@@ -112,10 +118,26 @@ export default function CheckoutPage() {
             toast.success('Booking added to cart!', { id: 'add-booking' });
           } catch (error: any) {
             console.error('Error adding pending booking:', error);
-            toast.error(error.message || 'Failed to add booking to cart', { id: 'add-booking' });
+            
+            // More specific error messages
+            let errorMessage = 'Failed to add booking to cart';
+            if (error.message?.includes('Session not ready')) {
+              errorMessage = 'Please wait a moment and try again';
+            } else if (error.message?.includes('Failed to reserve seats')) {
+              errorMessage = 'Seats are no longer available. Please select different tickets.';
+            } else if (error.message?.includes('Authentication')) {
+              errorMessage = 'Please login again to continue';
+              router.replace('/login?redirect=/cart/checkout');
+              return;
+            }
+            
+            toast.error(errorMessage, { id: 'add-booking' });
             sessionStorage.removeItem('pendingBooking');
-            // Redirect to cart if adding failed
-            router.push('/cart');
+            
+            // Redirect to cart after error
+            setTimeout(() => {
+              router.push('/cart');
+            }, 2000);
           }
         } else if (items.length === 0) {
           // Only redirect if no pending booking and cart is empty
