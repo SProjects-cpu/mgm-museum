@@ -193,6 +193,45 @@ export default function AdminBookingsPage() {
     }
   };
 
+  const handleExportToExcel = async () => {
+    try {
+      toast.loading('Generating Excel file...', { id: 'export-excel' });
+
+      const params = new URLSearchParams();
+      if (statusFilter !== 'all') {
+        params.append('status', statusFilter);
+      }
+      if (paymentStatusFilter !== 'all') {
+        params.append('paymentStatus', paymentStatusFilter);
+      }
+      if (searchTerm) {
+        params.append('search', searchTerm);
+      }
+
+      const response = await fetch(`/api/admin/bookings/export?${params}`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to generate Excel file');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+      a.download = `bookings-export-${timestamp}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast.success('Excel file downloaded successfully', { id: 'export-excel' });
+    } catch (error: any) {
+      console.error('Error exporting to Excel:', error);
+      toast.error(error.message || 'Failed to export to Excel', { id: 'export-excel' });
+    }
+  };
+
   const handleRefund = async () => {
     if (!selectedBooking) return;
 
@@ -397,9 +436,9 @@ export default function AdminBookingsPage() {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Recent Bookings</CardTitle>
-            <Button variant="outline" size="sm">
+            <Button variant="outline" size="sm" onClick={handleExportToExcel} disabled={loading}>
               <Download className="w-4 h-4 mr-2" />
-              Export
+              Export to Excel
             </Button>
           </div>
         </CardHeader>

@@ -4,24 +4,50 @@ import { useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, Download, Calendar, Clock, Users, MapPin } from 'lucide-react';
+import { CheckCircle, Download, Calendar, Clock, Users, MapPin, Loader2, Mail } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { toast } from 'sonner';
+import { supabase } from '@/lib/supabase/config';
 
 export default function BookingConfirmationPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [bookings, setBookings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [downloadingTicket, setDownloadingTicket] = useState<string | null>(null);
 
   useEffect(() => {
-    const bookingsParam = searchParams?.get('bookings');
-    if (bookingsParam) {
-      try {
-        const parsedBookings = JSON.parse(bookingsParam);
-        setBookings(Array.isArray(parsedBookings) ? parsedBookings : [parsedBookings]);
-      } catch (error) {
-        console.error('Error parsing bookings:', error);
+    const fetchBookings = async () => {
+      const idsParam = searchParams?.get('ids');
+      if (!idsParam) {
+        setLoading(false);
+        return;
       }
-    }
+
+      try {
+        const ids = idsParam.split(',');
+        const { data, error } = await supabase
+          .from('bookings')
+          .select(`
+            *,
+            time_slot:time_slots(start_time, end_time),
+            exhibition:exhibitions(name),
+            show:shows(name)
+          `)
+          .in('id', ids);
+
+        if (error) throw error;
+
+        setBookings(data || []);
+      } catch (error: any) {
+        console.error('Error fetching bookings:', error);
+        toast.error('Failed to load booking details');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBookings();
   }, [searchParams]);
 
   const formatDate = (dateString: string) => {
@@ -34,10 +60,56 @@ export default function BookingConfirmationPage() {
     });
   };
 
-  const handleDownloadTicket = (booking: any) => {
-    // TODO: Implement PDF generation
-    console.log('Download ticket for booking:', booking.booking_reference);
+  const handleDownloadTicket = async (booking: any) => {
+    setDownloadingTicket(booking.id);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Please login to download tickets');
+        return;
+      }
+
+      const response = await fetch(`/api/tickets/generate?bookingId=${booking.id}`, {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate ticket');
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `ticket-${booking.booking_reference}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast.success('Ticket downloaded successfully');
+    } catch (error: any) {
+      console.error('Error downloading ticket:', error);
+      toast.error(error.message || 'Failed to download ticket');
+    } finally {
+      setDownloadingTicket(null);
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <Card className="max-w-md w-full">
+          <CardContent className="pt-6 text-center">
+            <Loader2 className="w-12 h-12 mx-auto animate-spin text-primary mb-4" />
+            <p className="text-muted-foreground">Loading booking details...</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (bookings.length === 0) {
     return (
@@ -132,15 +204,47 @@ export default function BookingConfirmationPage() {
                     </div>
                   </div>
 
+                  {/* Visitor Details */}
+                  <div className="bg-muted/50 rounded-lg p-4 mb-6">
+                    <h4 className="font-semibold mb-2">Visitor Information</h4>
+                    <div className="space-y-1 text-sm">
+                      <p><span className="text-muted-foreground">Name:</span> {booking.visitor_name}</p>
+                      <p><span className="text-muted-foreground">Email:</span> {booking.visitor_email}</p>
+                      {booking.visitor_phone && (
+                        <p><span className="text-muted-foreground">Phone:</span> {booking.visitor_phone}</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Exhibition/Show Name */}
+                  <div className="mb-6">
+                    <h4 className="font-semibold mb-2">
+                      {booking.exhibition?.name || booking.show?.name}
+                    </h4>
+                    <p className="text-sm text-muted-foreground">
+                      {booking.exhibition ? 'Exhibition' : 'Show'}
+                    </p>
+                  </div>
+
                   {/* Actions */}
                   <div className="flex gap-3">
                     <Button
                       variant="outline"
                       onClick={() => handleDownloadTicket(booking)}
+                      disabled={downloadingTicket === booking.id}
                       className="flex-1"
                     >
-                      <Download className="w-4 h-4 mr-2" />
-                      Download Ticket
+                      {downloadingTicket === booking.id ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Generating...
+                        </>
+                      ) : (
+                        <>
+                          <Download className="w-4 h-4 mr-2" />
+                          Download Ticket
+                        </>
+                      )}
                     </Button>
                   </div>
                 </CardContent>
@@ -149,15 +253,31 @@ export default function BookingConfirmationPage() {
           ))}
         </div>
 
+        {/* Email Confirmation Notice */}
+        <Card className="mt-8 bg-blue-50 border-blue-200">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <Mail className="w-5 h-5 text-blue-600 mt-0.5" />
+              <div>
+                <h3 className="font-bold mb-2 text-blue-900">Confirmation Email Sent</h3>
+                <p className="text-sm text-blue-800">
+                  A confirmation email with your booking details and tickets has been sent to{' '}
+                  <span className="font-medium">{bookings[0]?.visitor_email}</span>
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Important Information */}
-        <Card className="mt-8">
+        <Card className="mt-4">
           <CardContent className="pt-6">
             <h3 className="font-bold mb-4">Important Information</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>• Please arrive 15 minutes before your scheduled time slot</li>
               <li>• Bring a valid ID for verification</li>
-              <li>• Show your booking reference at the entrance</li>
-              <li>• A confirmation email has been sent to your email address</li>
+              <li>• Show your booking reference or QR code at the entrance</li>
+              <li>• Download your tickets before your visit</li>
               <li>• For any queries, contact us at info@mgmmuseum.com</li>
             </ul>
           </CardContent>

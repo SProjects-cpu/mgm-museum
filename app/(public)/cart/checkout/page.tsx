@@ -8,16 +8,25 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, CreditCard, Loader2 } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { ArrowLeft, CreditCard, Loader2, AlertCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { useCartStore } from '@/lib/store/cart';
 import { supabase } from '@/lib/supabase/config';
 
+declare global {
+  interface Window {
+    Razorpay: any;
+  }
+}
+
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items, getCartTotal, getTotalTickets } = useCartStore();
+  const { items, getCartTotal, getTotalTickets, clearCart } = useCartStore();
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [razorpayLoaded, setRazorpayLoaded] = useState(false);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -26,6 +35,22 @@ export default function CheckoutPage() {
     phone: '',
     termsAccepted: false,
   });
+
+  // Load Razorpay script
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    script.onload = () => setRazorpayLoaded(true);
+    script.onerror = () => {
+      setError('Failed to load payment gateway. Please refresh the page.');
+    };
+    document.body.appendChild(script);
+
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
 
   // Get user data
   useEffect(() => {
@@ -37,10 +62,13 @@ export default function CheckoutPage() {
           ...prev,
           email: user.email || '',
         }));
+      } else {
+        toast.error('Please login to continue');
+        router.push('/login');
       }
     };
     getUser();
-  }, []);
+  }, [router]);
 
   // Redirect if cart is empty
   useEffect(() => {
@@ -55,14 +83,20 @@ export default function CheckoutPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
 
     if (!formData.name || !formData.email) {
-      toast.error('Please fill in all required fields');
+      setError('Please fill in all required fields');
       return;
     }
 
     if (!formData.termsAccepted) {
-      toast.error('Please accept the terms and conditions');
+      setError('Please accept the terms and conditions');
+      return;
+    }
+
+    if (totalAmount > 0 && !razorpayLoaded) {
+      setError('Payment gateway is still loading. Please wait...');
       return;
     }
 
@@ -71,7 +105,6 @@ export default function CheckoutPage() {
     try {
       // For free admission, skip payment
       if (totalAmount === 0) {
-        // Create bookings directly
         toast.success('Processing your free booking...');
         // TODO: Create bookings without payment
         router.push('/bookings/confirmation');
@@ -81,9 +114,7 @@ export default function CheckoutPage() {
       // Create payment order
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        toast.error('Please login to continue');
-        router.push('/login');
-        return;
+        throw new Error('Session expired. Please login again.');
       }
 
       const response = await fetch('/api/payment/create-order', {
@@ -93,8 +124,22 @@ export default function CheckoutPage() {
           'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
-          cartItems: items,
-          userDetails: formData,
+          cartItems: items.map(item => ({
+            exhibitionId: item.exhibitionId,
+            showId: item.showId,
+            timeSlotId: item.timeSlotId,
+            bookingDate: item.bookingDate,
+            tickets: item.tickets,
+            totalTickets: item.totalTickets,
+            subtotal: item.subtotal,
+            exhibitionName: item.exhibitionName,
+            showName: item.showName,
+          })),
+          userDetails: {
+            name: formData.name,
+            email: formData.email,
+            phone: formData.phone,
+          },
         }),
       });
 
@@ -105,7 +150,6 @@ export default function CheckoutPage() {
       }
 
       if (data.isFree) {
-        // Free admission
         toast.success('Processing your free booking...');
         router.push('/bookings/confirmation');
         return;
@@ -115,13 +159,19 @@ export default function CheckoutPage() {
       initializeRazorpay(data);
     } catch (error: any) {
       console.error('Checkout error:', error);
+      setError(error.message || 'Failed to process checkout');
       toast.error(error.message || 'Failed to process checkout');
-    } finally {
       setLoading(false);
     }
   };
 
   const initializeRazorpay = (orderData: any) => {
+    if (!window.Razorpay) {
+      setError('Payment gateway not loaded. Please refresh the page.');
+      setLoading(false);
+      return;
+    }
+
     const options = {
       key: orderData.razorpayKeyId,
       amount: orderData.amountInPaise,
@@ -143,32 +193,66 @@ export default function CheckoutPage() {
       modal: {
         ondismiss: function () {
           setLoading(false);
-          toast.info('Payment cancelled');
+          toast.info('Payment cancelled. Your cart has been preserved.');
         },
+        escape: false,
+        backdropclose: false,
       },
     };
 
-    // Load Razorpay script
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.async = true;
-    script.onload = () => {
-      const rzp = new (window as any).Razorpay(options);
+    try {
+      const rzp = new window.Razorpay(options);
+      rzp.on('payment.failed', function (response: any) {
+        console.error('Payment failed:', response.error);
+        handlePaymentFailure(response.error);
+      });
       rzp.open();
-    };
-    script.onerror = () => {
+    } catch (error: any) {
+      console.error('Razorpay initialization error:', error);
+      setError('Failed to initialize payment. Please try again.');
       setLoading(false);
-      toast.error('Failed to load payment gateway');
-    };
-    document.body.appendChild(script);
+    }
+  };
+
+  const handlePaymentFailure = async (error: any) => {
+    setLoading(false);
+    const errorMessage = error.description || error.reason || 'Payment failed';
+    setError(errorMessage);
+    toast.error(errorMessage);
+
+    // Log failure to backend
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        await fetch('/api/payment/failure', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            error: {
+              code: error.code,
+              description: error.description,
+              reason: error.reason,
+              metadata: error.metadata,
+            },
+          }),
+        });
+      }
+    } catch (logError) {
+      console.error('Failed to log payment failure:', logError);
+    }
   };
 
   const verifyPayment = async (response: any) => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        throw new Error('Session expired');
+        throw new Error('Session expired. Please login again.');
       }
+
+      toast.loading('Verifying payment...', { id: 'verify-payment' });
 
       const verifyResponse = await fetch('/api/payment/verify', {
         method: 'POST',
@@ -176,7 +260,11 @@ export default function CheckoutPage() {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session.access_token}`,
         },
-        body: JSON.stringify(response),
+        body: JSON.stringify({
+          razorpay_order_id: response.razorpay_order_id,
+          razorpay_payment_id: response.razorpay_payment_id,
+          razorpay_signature: response.razorpay_signature,
+        }),
       });
 
       const data = await verifyResponse.json();
@@ -185,11 +273,19 @@ export default function CheckoutPage() {
         throw new Error(data.message || 'Payment verification failed');
       }
 
-      toast.success('Payment successful!');
-      router.push(`/bookings/confirmation?bookings=${JSON.stringify(data.bookings)}`);
+      toast.success('Payment successful! Redirecting...', { id: 'verify-payment' });
+      
+      // Clear cart after successful payment
+      await clearCart();
+      
+      // Redirect to confirmation page
+      const bookingIds = data.bookings.map((b: any) => b.id).join(',');
+      router.push(`/bookings/confirmation?ids=${bookingIds}`);
     } catch (error: any) {
       console.error('Payment verification error:', error);
-      toast.error(error.message || 'Payment verification failed');
+      toast.error(error.message || 'Payment verification failed', { id: 'verify-payment' });
+      setError(error.message || 'Payment verification failed. Please contact support with your payment details.');
+      setLoading(false);
     }
   };
 
@@ -222,6 +318,20 @@ export default function CheckoutPage() {
               </CardHeader>
               <CardContent>
                 <form onSubmit={handleSubmit} className="space-y-4">
+                  {error && (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>{error}</AlertDescription>
+                    </Alert>
+                  )}
+
+                  {!razorpayLoaded && totalAmount > 0 && (
+                    <Alert>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <AlertDescription>Loading payment gateway...</AlertDescription>
+                    </Alert>
+                  )}
+
                   <div>
                     <Label htmlFor="name">Full Name *</Label>
                     <Input
