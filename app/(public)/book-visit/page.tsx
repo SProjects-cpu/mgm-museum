@@ -1,18 +1,24 @@
 'use client';
 
-import { useSearchParams } from 'next/navigation';
+import { useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useBookingFlow } from '@/lib/hooks/useBookingFlow';
 import { BookingCalendar } from '@/components/booking/BookingCalendar';
 import { TimeSlotSelector } from '@/components/booking/TimeSlotSelector';
 import { TicketTypeSelector } from '@/components/booking/TicketTypeSelector';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowLeft, ArrowRight, Calendar, Clock, Ticket, CreditCard } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Calendar, Clock, Ticket, CreditCard, Loader2 } from 'lucide-react';
+import { useCartStore } from '@/lib/store/cart';
+import { toast } from 'sonner';
 
 export default function BookVisitPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const exhibitionId = searchParams.get('exhibitionId') || '';
   const exhibitionName = searchParams.get('exhibitionName') || 'Exhibition';
+  const [addingToCart, setAddingToCart] = useState(false);
+  const { addItem } = useCartStore();
 
   const {
     step,
@@ -29,6 +35,48 @@ export default function BookVisitPage() {
     error,
     setError,
   } = useBookingFlow(exhibitionId);
+
+  const handleProceedToCheckout = async () => {
+    if (!selectedDate || !selectedTimeSlot || selectedTickets.length === 0) {
+      toast.error('Please complete all booking details');
+      return;
+    }
+
+    setAddingToCart(true);
+    try {
+      // Convert selected tickets to the format expected by cart
+      const tickets = {
+        adult: selectedTickets.find(t => t.ticketType.toLowerCase() === 'adult')?.quantity || 0,
+        child: selectedTickets.find(t => t.ticketType.toLowerCase() === 'child')?.quantity || 0,
+        student: selectedTickets.find(t => t.ticketType.toLowerCase() === 'student')?.quantity || 0,
+        senior: selectedTickets.find(t => t.ticketType.toLowerCase() === 'senior')?.quantity || 0,
+      };
+
+      const totalTickets = Object.values(tickets).reduce((sum, qty) => sum + qty, 0);
+
+      // Add to cart
+      await addItem({
+        exhibitionId: exhibitionId,
+        exhibitionName: exhibitionName,
+        timeSlotId: selectedTimeSlot.id,
+        bookingDate: selectedDate.toISOString().split('T')[0],
+        tickets: tickets,
+        totalTickets: totalTickets,
+        subtotal: totalAmount,
+      });
+
+      toast.success('Added to cart! Redirecting to checkout...');
+      
+      // Redirect to checkout
+      setTimeout(() => {
+        router.push('/cart/checkout');
+      }, 1000);
+    } catch (error: any) {
+      console.error('Error adding to cart:', error);
+      toast.error(error.message || 'Failed to add to cart');
+      setAddingToCart(false);
+    }
+  };
 
   if (!exhibitionId) {
     return (
@@ -176,11 +224,15 @@ export default function BookVisitPage() {
 
           {step === 'payment' && (
             <div>
-              <h2 className="text-2xl font-bold mb-4">Payment</h2>
+              <h2 className="text-2xl font-bold mb-4">Review & Proceed to Payment</h2>
               <div className="space-y-4">
                 <Card className="p-4 bg-muted">
                   <h3 className="font-semibold mb-2">Booking Summary</h3>
                   <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span>Exhibition:</span>
+                      <span className="font-medium">{exhibitionName}</span>
+                    </div>
                     <div className="flex justify-between">
                       <span>Date:</span>
                       <span>{selectedDate?.toLocaleDateString()}</span>
@@ -203,10 +255,9 @@ export default function BookVisitPage() {
                     </div>
                   </div>
                 </Card>
-                <div className="text-center text-muted-foreground">
-                  <p>Payment integration coming soon</p>
-                  <p className="text-sm mt-2">
-                    This will integrate with Razorpay for secure payments
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <p className="text-sm text-blue-900">
+                    Click "Proceed to Checkout" to add this booking to your cart and complete payment securely via Razorpay.
                   </p>
                 </div>
               </div>
@@ -230,11 +281,25 @@ export default function BookVisitPage() {
           </div>
 
           <Button
-            onClick={goToNextStep}
-            disabled={!canProceed}
+            onClick={step === 'payment' ? handleProceedToCheckout : goToNextStep}
+            disabled={!canProceed || (step === 'payment' && addingToCart)}
           >
-            {step === 'payment' ? 'Complete Booking' : 'Continue'}
-            <ArrowRight className="w-4 h-4 ml-2" />
+            {addingToCart ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Adding to Cart...
+              </>
+            ) : step === 'payment' ? (
+              <>
+                Proceed to Checkout
+                <CreditCard className="w-4 h-4 ml-2" />
+              </>
+            ) : (
+              <>
+                Continue
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </>
+            )}
           </Button>
         </div>
       </div>
