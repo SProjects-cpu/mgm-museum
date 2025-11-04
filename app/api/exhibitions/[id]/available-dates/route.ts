@@ -5,8 +5,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  successResponse,
-  errorResponse,
+  createSuccessResponse,
+  createErrorResponse,
   cachedResponse,
   parseQueryParams,
   withErrorHandling,

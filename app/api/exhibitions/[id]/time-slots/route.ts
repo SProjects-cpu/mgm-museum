@@ -2,7 +2,7 @@ import { NextRequest } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase/config';
 import { createErrorResponse, createSuccessResponse } from '@/lib/api/response';
 import { BookingErrorCode } from '@/lib/api/errors';
-import { getAvailableTimeSlotsForExhibition, getTimeSlotPricing } from '@/lib/api/booking-queries';
+import { getTimeSlots, getSlotPricing } from '@/lib/api/booking-queries';
 
 export async function GET(
   request: NextRequest,
@@ -48,33 +48,11 @@ export async function GET(
       );
     }
 
-    // Get available time slots using database function
-    const timeSlots = await getAvailableTimeSlotsForExhibition(exhibitionId, date);
-
-    // Get pricing for each time slot
-    const timeSlotsWithPricing = await Promise.all(
-      timeSlots.map(async (slot) => {
-        const pricing = await getTimeSlotPricing(
-          exhibitionId,
-          date,
-          slot.slot_id
-        );
-
-        return {
-          id: slot.slot_id,
-          startTime: slot.start_time,
-          endTime: slot.end_time,
-          totalCapacity: slot.total_capacity,
-          availableCapacity: slot.available_capacity,
-          bookedCount: slot.booked_count,
-          isFull: slot.available_capacity === 0,
-          pricing,
-        };
-      })
-    );
+    // Get available time slots with pricing
+    const timeSlots = await getTimeSlots(exhibitionId, date);
 
     return createSuccessResponse({
-      timeSlots: timeSlotsWithPricing,
+      timeSlots,
     });
   } catch (error: any) {
     console.error('[API] Error fetching time slots:', error);

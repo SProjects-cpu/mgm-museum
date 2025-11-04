@@ -295,3 +295,18 @@ export function handleOptions(): NextResponse {
   const response = new NextResponse(null, { status: 204 });
   return addCorsHeaders(response);
 }
+
+/**
+ * Aliases for backward compatibility
+ */
+export const createSuccessResponse = successResponse;
+export const createErrorResponse = (
+  code: string,
+  message: string,
+  status: number = 500,
+  details?: any
+): NextResponse<ApiResponse> => {
+  const error = new BookingError(code as any, message, details);
+  error.statusCode = status;
+  return errorResponse(error);
+};
