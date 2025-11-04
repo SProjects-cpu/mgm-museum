@@ -54,11 +54,28 @@ export default function BookVisitPage() {
 
       const totalTickets = Object.values(tickets).reduce((sum, qty) => sum + qty, 0);
 
+      // Create a full TimeSlot object for the cart
+      const fullTimeSlot = {
+        id: selectedTimeSlot.id,
+        slotDate: selectedDate.toISOString().split('T')[0],
+        startTime: selectedTimeSlot.startTime,
+        endTime: selectedTimeSlot.endTime,
+        capacity: selectedTimeSlot.totalCapacity,
+        currentBookings: selectedTimeSlot.totalCapacity - selectedTimeSlot.availableCapacity,
+        bufferCapacity: 5,
+        availableCapacity: selectedTimeSlot.availableCapacity,
+        active: true,
+        itemType: 'exhibition' as const,
+        itemId: exhibitionId,
+        itemName: exhibitionName,
+      };
+
       // Add to cart
       await addItem({
         exhibitionId: exhibitionId,
         exhibitionName: exhibitionName,
         timeSlotId: selectedTimeSlot.id,
+        timeSlot: fullTimeSlot,
         bookingDate: selectedDate.toISOString().split('T')[0],
         tickets: tickets,
         totalTickets: totalTickets,
