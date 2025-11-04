@@ -25,7 +25,7 @@ export default function BookVisitPage() {
   // Handle return from login
   useEffect(() => {
     const handlePostLogin = async () => {
-      if (action === 'checkout') {
+      if (action === 'checkout' && exhibitionId) {
         const pendingBooking = sessionStorage.getItem('pendingBooking');
         if (pendingBooking) {
           try {
@@ -34,7 +34,6 @@ export default function BookVisitPage() {
             // Check if user is now logged in
             const { data: { user } } = await supabase.auth.getUser();
             if (!user) {
-              toast.error('Please login to continue');
               return;
             }
 
@@ -47,7 +46,7 @@ export default function BookVisitPage() {
             toast.success('Login successful! Proceeding with your booking...');
             
             // Auto-trigger checkout after state is restored
-            setTimeout(() => {
+            setTimeout(async () => {
               const checkoutBtn = document.querySelector('[data-checkout-btn]') as HTMLButtonElement;
               if (checkoutBtn) {
                 checkoutBtn.click();
@@ -103,7 +102,8 @@ export default function BookVisitPage() {
         sessionStorage.setItem('pendingBooking', JSON.stringify(bookingData));
         
         toast.info('Please login to continue with your booking');
-        router.push('/login?redirect=/book-visit&action=checkout');
+        const redirectUrl = `/book-visit?exhibitionId=${exhibitionId}&exhibitionName=${encodeURIComponent(exhibitionName)}&action=checkout`;
+        router.push(`/login?redirect=${encodeURIComponent(redirectUrl)}`);
         return;
       }
       // Convert selected tickets to the format expected by cart
