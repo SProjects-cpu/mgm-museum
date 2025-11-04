@@ -27,6 +27,8 @@ export async function GET(request: NextRequest) {
     }
 
     // Query cart_items with time_slots joined
+    console.log('Loading cart for user:', user.id);
+    
     const { data: cartItems, error: fetchError } = await supabase
       .from('cart_items')
       .select(`
@@ -47,11 +49,14 @@ export async function GET(request: NextRequest) {
       .order('created_at', { ascending: false });
 
     if (fetchError) {
+      console.error('Failed to load cart:', fetchError);
       return NextResponse.json(
-        { success: false, message: 'Failed to load cart' },
+        { success: false, message: `Failed to load cart: ${fetchError.message}`, details: fetchError },
         { status: 500 }
       );
     }
+
+    console.log('Cart loaded successfully:', { itemCount: cartItems?.length || 0 });
 
     // Transform database records to CartItem format
     const items = (cartItems || []).map((item: any) => ({

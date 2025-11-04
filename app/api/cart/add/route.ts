@@ -60,12 +60,23 @@ export async function POST(request: NextRequest) {
       .eq('id', timeSlotId)
       .single();
 
-    if (slotError || !timeSlot) {
+    if (slotError) {
+      console.error('Error fetching time slot:', slotError);
+      return NextResponse.json(
+        { success: false, message: `Time slot error: ${slotError.message}`, details: slotError },
+        { status: 500 }
+      );
+    }
+
+    if (!timeSlot) {
+      console.error('Time slot not found:', timeSlotId);
       return NextResponse.json(
         { success: false, message: 'Time slot not found' },
         { status: 404 }
       );
     }
+
+    console.log('Time slot found:', { id: timeSlot.id, capacity: timeSlot.capacity, current_bookings: timeSlot.current_bookings });
 
     // Calculate available capacity
     const availableCapacity = 
@@ -84,19 +95,25 @@ export async function POST(request: NextRequest) {
     }
 
     // Reserve seats by incrementing current_bookings
-    const { error: updateError } = await supabase
+    console.log('Attempting to reserve seats:', { timeSlotId, currentBookings: timeSlot.current_bookings, totalTickets, newBookings: (timeSlot.current_bookings || 0) + totalTickets });
+    
+    const { data: updateData, error: updateError } = await supabase
       .from('time_slots')
       .update({ 
         current_bookings: (timeSlot.current_bookings || 0) + totalTickets 
       })
-      .eq('id', timeSlotId);
+      .eq('id', timeSlotId)
+      .select();
 
     if (updateError) {
+      console.error('Failed to reserve seats:', updateError);
       return NextResponse.json(
-        { success: false, message: 'Failed to reserve seats' },
+        { success: false, message: `Failed to reserve seats: ${updateError.message}`, details: updateError },
         { status: 500 }
       );
     }
+
+    console.log('Seats reserved successfully:', updateData);
 
     // Fetch exhibition/show name for denormalization
     let exhibitionName: string | undefined;
@@ -123,28 +140,34 @@ export async function POST(request: NextRequest) {
     // Insert into cart_items table with 15-minute expiration
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
     
+    const cartItemData = {
+      user_id: user.id,
+      time_slot_id: timeSlotId,
+      exhibition_id: exhibitionId || null,
+      show_id: showId || null,
+      exhibition_name: exhibitionName || null,
+      show_name: showName || null,
+      booking_date: bookingDate,
+      adult_tickets: tickets.adult || 0,
+      child_tickets: tickets.child || 0,
+      student_tickets: tickets.student || 0,
+      senior_tickets: tickets.senior || 0,
+      total_tickets: totalTickets,
+      subtotal: 0, // Will be calculated with pricing
+      expires_at: expiresAt.toISOString(),
+    };
+
+    console.log('Attempting to insert cart item:', cartItemData);
+    
     const { data: cartItem, error: insertError } = await supabase
       .from('cart_items')
-      .insert({
-        user_id: user.id,
-        time_slot_id: timeSlotId,
-        exhibition_id: exhibitionId,
-        show_id: showId,
-        exhibition_name: exhibitionName,
-        show_name: showName,
-        booking_date: bookingDate,
-        adult_tickets: tickets.adult || 0,
-        child_tickets: tickets.child || 0,
-        student_tickets: tickets.student || 0,
-        senior_tickets: tickets.senior || 0,
-        total_tickets: totalTickets,
-        subtotal: 0, // Will be calculated with pricing
-        expires_at: expiresAt.toISOString(),
-      })
+      .insert(cartItemData)
       .select()
       .single();
 
     if (insertError) {
+      console.error('Failed to insert cart item:', insertError);
+      
       // Rollback seat reservation
       await supabase
         .from('time_slots')
@@ -154,10 +177,12 @@ export async function POST(request: NextRequest) {
         .eq('id', timeSlotId);
 
       return NextResponse.json(
-        { success: false, message: 'Failed to add item to cart' },
+        { success: false, message: `Failed to add item to cart: ${insertError.message}`, details: insertError },
         { status: 500 }
       );
     }
+
+    console.log('Cart item inserted successfully:', cartItem);
 
     return NextResponse.json({
       success: true,
