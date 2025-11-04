@@ -7,7 +7,7 @@ import { ConditionalMain } from "@/components/layout/conditional-main";
 import { ConditionalFooter } from "@/components/layout/conditional-footer";
 import { MUSEUM_INFO } from "@/lib/constants";
 import { Toaster } from "sonner";
-// import { RealtimeSyncProvider } from "@/lib/contexts/realtime-sync-context"; // DISABLED - causing WebSocket errors
+import { RealtimeSyncProvider } from "@/lib/contexts/realtime-sync-context"; // Re-enabled with environment-based control
 import { NotFoundProvider } from "@/lib/contexts/not-found-context";
 
 const inter = Inter({
@@ -110,12 +110,14 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${spaceGrotesk.variable} antialiased`}
       >
-        <NotFoundProvider>
-          <ConditionalNavbar />
-          <ConditionalMain>{children}</ConditionalMain>
-          <ConditionalFooter />
-          <Toaster position="top-right" richColors />
-        </NotFoundProvider>
+        <RealtimeSyncProvider>
+          <NotFoundProvider>
+            <ConditionalNavbar />
+            <ConditionalMain>{children}</ConditionalMain>
+            <ConditionalFooter />
+            <Toaster position="top-right" richColors />
+          </NotFoundProvider>
+        </RealtimeSyncProvider>
       </body>
     </html>
   );

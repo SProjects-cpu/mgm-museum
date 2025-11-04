@@ -74,36 +74,36 @@ export function ExhibitionsClient() {
     fetchExhibitions();
   }, [fetchExhibitions]);
 
-  // Listen to real-time updates for exhibitions - DISABLED
-  // useTableSync<Exhibition>('exhibitions', (data, eventType) => {
-  //   console.log('Exhibition update received:', eventType, data);
-  //   if (eventType === 'INSERT' && data) {
-  //     // Add new exhibition
-  //     setExhibitions(prev => {
-  //       // Check if it already exists
-  //       if (prev.some(ex => ex.id === data.id)) {
-  //         return prev;
-  //       }
-  //       return [...prev, data];
-  //     });
-  //     toast.success('New exhibition added!', {
-  //       description: data.name,
-  //       duration: 3000,
-  //     });
-  //   } else if (eventType === 'UPDATE' && data) {
-  //     // Update existing exhibition
-  //     setExhibitions(prev =>
-  //       prev.map(ex => (ex.id === data.id ? { ...ex, ...data } : ex))
-  //     );
-  //   } else if (eventType === 'DELETE' && data) {
-  //     // Remove deleted exhibition
-  //     setExhibitions(prev => prev.filter(ex => ex.id !== data.id));
-  //     toast.info('Exhibition removed', {
-  //       description: data.name,
-  //       duration: 3000,
-  //     });
-  //   }
-  // });
+  // Listen to real-time updates for exhibitions (only if realtime enabled)
+  useTableSync<Exhibition>('exhibitions', (data, eventType) => {
+    console.log('Exhibition update received:', eventType, data);
+    if (eventType === 'INSERT' && data) {
+      // Add new exhibition
+      setExhibitions(prev => {
+        // Check if it already exists
+        if (prev.some(ex => ex.id === data.id)) {
+          return prev;
+        }
+        return [...prev, data];
+      });
+      toast.success('New exhibition added!', {
+        description: data.name,
+        duration: 3000,
+      });
+    } else if (eventType === 'UPDATE' && data) {
+      // Update existing exhibition
+      setExhibitions(prev =>
+        prev.map(ex => (ex.id === data.id ? { ...ex, ...data } : ex))
+      );
+    } else if (eventType === 'DELETE' && data) {
+      // Remove deleted exhibition
+      setExhibitions(prev => prev.filter(ex => ex.id !== data.id));
+      toast.info('Exhibition removed', {
+        description: data.name,
+        duration: 3000,
+      });
+    }
+  });
 
   const filteredExhibitions = exhibitions.filter((exhibition) => {
     const matchesSearch = exhibition.name

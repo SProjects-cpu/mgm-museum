@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
-import { supabase, subscribeToChanges } from "@/lib/supabase/config";
+import { supabase, subscribeToChanges, isRealtimeEnabled } from "@/lib/supabase/config";
 import { toast } from "sonner";
 
 export interface RealtimeUpdate {
@@ -30,23 +30,14 @@ export function RealtimeSyncProvider({ children }: { children: React.ReactNode }
 
   // Initialize real-time connection
   useEffect(() => {
-    const enableRealtime = process.env.NEXT_PUBLIC_ENABLE_REALTIME !== 'false';
-    
-    // Check if Supabase is properly configured
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    const hasValidSupabase = supabaseUrl && 
-                            supabaseKey && 
-                            !supabaseUrl.includes('placeholder') &&
-                            !supabaseKey.includes('placeholder') &&
-                            supabaseUrl.startsWith('https://');
-    
-    if (!enableRealtime || !hasValidSupabase) {
-      // Silently disable realtime if not configured
+    // Use the centralized realtime configuration
+    if (!isRealtimeEnabled) {
+      console.log('[RealtimeSync] Realtime is disabled');
+      setIsConnected(false);
       return;
     }
 
-    console.log('Initializing real-time sync...');
+    console.log('[RealtimeSync] Initializing real-time sync...');
     setIsConnected(true);
 
     // Subscribe to all relevant tables

@@ -1,6 +1,6 @@
 import { AdminLayout } from "./admin-layout";
 import { WebSocketProvider } from "@/lib/contexts/websocket-context";
-// import { RealtimeSyncProvider } from "@/lib/contexts/realtime-sync-context"; // DISABLED - causing WebSocket errors
+import { RealtimeSyncProvider } from "@/lib/contexts/realtime-sync-context"; // Re-enabled with environment-based control
 import { AuthGuard } from "@/components/admin/auth-guard";
 import { Toaster } from "sonner";
 
@@ -15,10 +15,12 @@ export const metadata = {
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <AuthGuard>
-      <WebSocketProvider>
-        <AdminLayout>{children}</AdminLayout>
-        <Toaster position="top-right" richColors />
-      </WebSocketProvider>
+      <RealtimeSyncProvider>
+        <WebSocketProvider>
+          <AdminLayout>{children}</AdminLayout>
+          <Toaster position="top-right" richColors />
+        </WebSocketProvider>
+      </RealtimeSyncProvider>
     </AuthGuard>
   );
 }
