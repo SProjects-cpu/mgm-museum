@@ -12,6 +12,7 @@ import { motion } from "framer-motion";
 import { formatCurrency } from "@/lib/utils";
 import { EXHIBITION_CATEGORY_LABELS } from "@/types";
 import { useRealtimeSync, useTableSync } from "@/lib/contexts/realtime-sync-context";
+import { useAutoRefresh, useRefreshOnFocus } from "@/lib/hooks/useAutoRefresh";
 import { toast } from "sonner";
 
 interface Exhibition {
@@ -72,6 +73,12 @@ export function ExhibitionsClient() {
   useEffect(() => {
     fetchExhibitions();
   }, [fetchExhibitions]);
+
+  // Auto-refresh every 30 seconds (fallback for when WebSocket fails)
+  useAutoRefresh(fetchExhibitions, 30000);
+
+  // Refresh when user returns to tab
+  useRefreshOnFocus(fetchExhibitions);
 
   // Listen to real-time updates for exhibitions (only if realtime enabled)
   useTableSync<Exhibition>('exhibitions', (data, eventType) => {

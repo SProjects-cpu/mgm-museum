@@ -17,6 +17,7 @@ import {
 import { motion } from "framer-motion";
 import { formatDate } from "@/lib/utils";
 import { useRealtimeSync, useTableSync } from "@/lib/contexts/realtime-sync-context";
+import { useAutoRefresh, useRefreshOnFocus } from "@/lib/hooks/useAutoRefresh";
 import { toast } from "sonner";
 
 interface Event {
@@ -73,6 +74,12 @@ export function EventsClient() {
   useEffect(() => {
     fetchEvents();
   }, [fetchEvents]);
+
+  // Auto-refresh every 30 seconds (fallback for when WebSocket fails)
+  useAutoRefresh(fetchEvents, 30000);
+
+  // Refresh when user returns to tab
+  useRefreshOnFocus(fetchEvents);
 
   // Listen to real-time updates for events (only if realtime enabled)
   useTableSync<Event>('events', (data, eventType) => {
