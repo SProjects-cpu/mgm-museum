@@ -31,9 +31,10 @@ export async function GET(
       
       if (error || !exhibition) {
         return errorResponse(
-          BookingErrorCode.VALIDATION_ERROR,
-          'Exhibition not found',
-          404
+          new BookingError(
+            BookingErrorCode.VALIDATION_ERROR,
+            'Exhibition not found'
+          )
         );
       }
       
