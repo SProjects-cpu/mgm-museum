@@ -163,32 +163,54 @@ export async function getTimeSlots(
   const supabase = getServiceSupabase();
 
   try {
-    // Call the database function
-    const { data, error } = await supabase
-      .rpc('get_available_slots_for_exhibition', {
-        p_exhibition_id: exhibitionId,
-        p_date: date,
-      });
+    // Get time slots for this exhibition
+    const { data: timeSlots, error: timeSlotsError } = await supabase
+      .from('time_slots')
+      .select('id, start_time, end_time, capacity, active')
+      .eq('exhibition_id', exhibitionId)
+      .eq('active', true)
+      .order('start_time');
 
-    if (error) throw error;
+    if (timeSlotsError) {
+      throw new BookingError(
+        BookingErrorCode.DATABASE_ERROR,
+        'Failed to fetch time slots',
+        { exhibitionId, date, error: timeSlotsError }
+      );
+    }
 
-    if (!data || data.length === 0) {
+    if (!timeSlots || timeSlots.length === 0) {
       return [];
+    }
+
+    // Get slot availability for the selected date
+    const { data: availability, error: availabilityError } = await supabase
+      .from('slot_availability')
+      .select('time_slot_id, available_capacity, booked_count')
+      .in('time_slot_id', timeSlots.map(slot => slot.id))
+      .eq('date', date);
+
+    if (availabilityError) {
+      console.error('Error fetching slot availability:', availabilityError);
+      // Continue without availability data rather than failing
     }
 
     // Get pricing for each slot
     const slotsWithPricing = await Promise.all(
-      data.map(async (slot: any) => {
+      timeSlots.map(async (slot) => {
         const pricing = await getSlotPricing(exhibitionId, date, slot.id);
+        const slotAvailability = availability?.find(a => a.time_slot_id === slot.id);
+        const availableCapacity = slotAvailability?.available_capacity ?? slot.capacity;
+        const bookedCount = slotAvailability?.booked_count ?? 0;
         
         return {
           id: slot.id,
           startTime: slot.start_time,
           endTime: slot.end_time,
-          totalCapacity: slot.total_capacity || 0,
-          availableCapacity: slot.available_capacity || 0,
-          bookedCount: slot.booked_count || 0,
-          isFull: (slot.booked_count || 0) >= (slot.available_capacity || 0),
+          totalCapacity: slot.capacity,
+          availableCapacity,
+          bookedCount,
+          isFull: availableCapacity <= 0,
           pricing,
         };
       })
@@ -196,6 +218,8 @@ export async function getTimeSlots(
 
     return slotsWithPricing;
   } catch (error) {
+    if (error instanceof BookingError) throw error;
+    
     throw new BookingError(
       BookingErrorCode.DATABASE_ERROR,
       'Failed to fetch time slots',
@@ -224,7 +248,10 @@ export async function getSlotPricing(
       .eq('time_slot_id', timeSlotId)
       .eq('is_active', true);
 
-    if (dynamicError) throw dynamicError;
+    if (dynamicError) {
+      console.error('Error fetching dynamic pricing:', dynamicError);
+      // Continue to default pricing instead of failing
+    }
 
     if (dynamicPricing && dynamicPricing.length > 0) {
       return dynamicPricing.map(p => ({
@@ -239,22 +266,22 @@ export async function getSlotPricing(
       .from('pricing')
       .select('ticket_type, price')
       .eq('exhibition_id', exhibitionId)
-      .eq('is_active', true)
-      .lte('valid_from', date)
-      .or(`valid_until.is.null,valid_until.gte.${date}`);
+      .eq('active', true);
 
-    if (pricingError) throw pricingError;
+    if (pricingError) {
+      console.error('Error fetching default pricing:', pricingError);
+      // Return empty array instead of failing
+      return [];
+    }
 
     return (defaultPricing || []).map(p => ({
       ticketType: p.ticket_type,
       price: p.price,
     }));
   } catch (error) {
-    throw new BookingError(
-      BookingErrorCode.DATABASE_ERROR,
-      'Failed to fetch pricing',
-      { exhibitionId, date, timeSlotId, error }
-    );
+    console.error('Unexpected error in getSlotPricing:', error);
+    // Return empty array instead of throwing
+    return [];
   }
 }
 
