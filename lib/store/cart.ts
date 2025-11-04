@@ -261,8 +261,26 @@ export const useCartStore = create<CartStore>()(
         try {
           set({ isLoading: true, error: null });
 
-          // Get auth session
-          const { data: { session } } = await supabase.auth.getSession();
+          // Get auth session with retry
+          let session = null;
+          let attempts = 0;
+          const maxAttempts = 3;
+
+          while (attempts < maxAttempts && !session) {
+            attempts++;
+            const { data: { session: currentSession } } = await supabase.auth.getSession();
+            
+            if (currentSession) {
+              session = currentSession;
+              break;
+            }
+
+            if (attempts < maxAttempts) {
+              // Wait before retrying
+              await new Promise(resolve => setTimeout(resolve, 500 * attempts));
+            }
+          }
+
           if (!session) {
             // User not authenticated, skip loading
             set({ isLoading: false });
@@ -277,6 +295,12 @@ export const useCartStore = create<CartStore>()(
           const data = await response.json();
 
           if (!response.ok) {
+            // If 401, session might not be ready yet
+            if (response.status === 401) {
+              console.warn('Cart load got 401, session may not be fully established');
+              set({ isLoading: false });
+              return;
+            }
             throw new Error(data.message || 'Failed to load cart');
           }
 
