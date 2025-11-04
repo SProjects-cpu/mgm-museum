@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServiceSupabase } from '@/lib/supabase/config';
+import { createClient } from '@supabase/supabase-js';
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = getServiceSupabase();
-
     // Get authenticated user from header
     const authHeader = request.headers.get('authorization');
     if (!authHeader) {
@@ -14,12 +12,25 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Extract user from JWT
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      authHeader.replace('Bearer ', '')
+    // Create Supabase client with user's auth token (not service role)
+    // This ensures RLS policies work correctly
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        global: {
+          headers: {
+            Authorization: authHeader
+          }
+        }
+      }
     );
 
+    // Get authenticated user
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+
     if (authError || !user) {
+      console.error('Auth error:', authError);
       return NextResponse.json(
         { success: false, message: 'Invalid authentication' },
         { status: 401 }
