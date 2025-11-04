@@ -8,6 +8,7 @@ import { ShoppingCart, Trash2 } from 'lucide-react';
 import { useCartStore } from '@/lib/store/cart';
 import { CartItemCard } from '@/components/cart/CartItemCard';
 import { CartSummary } from '@/components/cart/CartSummary';
+import { supabase } from '@/lib/supabase/config';
 
 export default function CartPage() {
   const router = useRouter();
@@ -60,8 +61,16 @@ export default function CartPage() {
   };
 
   // Handle checkout
-  const handleCheckout = () => {
-    router.push('/cart/checkout');
+  const handleCheckout = async () => {
+    // Check if user is authenticated
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      // Redirect to login with return URL
+      router.push('/login?redirect=/cart/checkout');
+    } else {
+      router.push('/cart/checkout');
+    }
   };
 
   // Empty state

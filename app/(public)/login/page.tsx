@@ -37,7 +37,8 @@ export default function LoginPage() {
 
   const handleRedirect = () => {
     const fullRedirect = action ? `${redirect}?action=${action}` : redirect;
-    router.push(fullRedirect);
+    // Use router.replace to prevent back button issues
+    router.replace(fullRedirect);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

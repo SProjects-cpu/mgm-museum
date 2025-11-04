@@ -64,7 +64,7 @@ export default function CheckoutPage() {
         }));
       } else {
         toast.error('Please login to continue');
-        router.push('/login');
+        router.replace('/login?redirect=/cart/checkout');
       }
     };
     getUser();
