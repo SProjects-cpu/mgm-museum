@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/jobs/cleanup-expired-locks",
-      "schedule": "* * * * *"
+      "schedule": "0 * * * *"
     }
   ]
 }
