@@ -75,36 +75,35 @@ export function EventsClient() {
     fetchEvents();
   }, [fetchEvents]);
 
-  // Listen to real-time updates for events
-  useTableSync<Event>('events', (data, eventType) => {
-    console.log('Event update received:', eventType, data);
-
-    if (eventType === 'INSERT' && data) {
-      // Add new event
-      setEvents(prev => {
-        if (prev.some(ev => ev.id === data.id)) {
-          return prev;
-        }
-        return [...prev, data];
-      });
-      toast.success('New event added!', {
-        description: data.title,
-        duration: 3000,
-      });
-    } else if (eventType === 'UPDATE' && data) {
-      // Update existing event
-      setEvents(prev =>
-        prev.map(ev => (ev.id === data.id ? { ...ev, ...data } : ev))
-      );
-    } else if (eventType === 'DELETE' && data) {
-      // Remove deleted event
-      setEvents(prev => prev.filter(ev => ev.id !== data.id));
-      toast.info('Event removed', {
-        description: data.title,
-        duration: 3000,
-      });
-    }
-  });
+  // Listen to real-time updates for events - DISABLED
+  // useTableSync<Event>('events', (data, eventType) => {
+  //   console.log('Event update received:', eventType, data);
+  //   if (eventType === 'INSERT' && data) {
+  //     // Add new event
+  //     setEvents(prev => {
+  //       if (prev.some(ev => ev.id === data.id)) {
+  //         return prev;
+  //       }
+  //       return [...prev, data];
+  //     });
+  //     toast.success('New event added!', {
+  //       description: data.title,
+  //       duration: 3000,
+  //     });
+  //   } else if (eventType === 'UPDATE' && data) {
+  //     // Update existing event
+  //     setEvents(prev =>
+  //       prev.map(ev => (ev.id === data.id ? { ...ev, ...data } : ev))
+  //     );
+  //   } else if (eventType === 'DELETE' && data) {
+  //     // Remove deleted event
+  //     setEvents(prev => prev.filter(ev => ev.id !== data.id));
+  //     toast.info('Event removed', {
+  //       description: data.title,
+  //       duration: 3000,
+  //     });
+  //   }
+  // });
 
   const filteredEvents = events.filter((event) => {
     const matchesSearch =
