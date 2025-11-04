@@ -14,9 +14,10 @@ const isSupabaseConfigured = supabaseUrl &&
                              !supabaseAnonKey.includes('placeholder') &&
                              supabaseUrl.startsWith('https://');
 
-// ALWAYS enable realtime for production booking system
-// We'll handle errors gracefully instead of disabling
-const shouldEnableRealtime = true;
+// DISABLE realtime - use polling instead
+// WebSocket is failing because Supabase Realtime is not configured
+// Polling provides reliable 30-second updates without errors
+const shouldEnableRealtime = false;
 
 // Export realtime status for components to check
 export const isRealtimeEnabled = shouldEnableRealtime;
@@ -49,7 +50,7 @@ export const supabase = isSupabaseConfigured
       },
       realtime: {
         params: {
-          eventsPerSecond: 10, // ENABLED for production booking system
+          eventsPerSecond: shouldEnableRealtime ? 10 : 0, // Disabled - using polling
         },
       },
       global: {
@@ -62,7 +63,7 @@ export const supabase = isSupabaseConfigured
 
 // Log realtime status (helpful for debugging)
 if (typeof window !== 'undefined' && isSupabaseConfigured) {
-  console.log(`[Supabase] Realtime: ENABLED for booking system (${process.env.NODE_ENV})`);
+  console.log(`[Supabase] Realtime: ${shouldEnableRealtime ? 'ENABLED' : 'DISABLED'} - Using polling for updates (${process.env.NODE_ENV})`);
 }
 
 // Server-side Supabase client with service role
@@ -79,7 +80,7 @@ export function getServiceSupabase() {
     },
     realtime: {
       params: {
-        eventsPerSecond: 10, // Also enabled on server
+        eventsPerSecond: shouldEnableRealtime ? 10 : 0, // Disabled - using polling
       },
     },
   });
