@@ -22,6 +22,22 @@ export default function BookVisitPage() {
   const [addingToCart, setAddingToCart] = useState(false);
   const { addItem } = useCartStore();
 
+  const {
+    step,
+    selectedDate,
+    selectedTimeSlot,
+    selectedTickets,
+    selectDate,
+    selectTimeSlot,
+    selectTickets,
+    goToNextStep,
+    goToPreviousStep,
+    totalAmount,
+    canProceed,
+    error,
+    setError,
+  } = useBookingFlow(exhibitionId);
+
   // Handle return from login
   useEffect(() => {
     const handlePostLogin = async () => {
@@ -61,23 +77,7 @@ export default function BookVisitPage() {
     };
 
     handlePostLogin();
-  }, [action, selectDate, selectTimeSlot, selectTickets]);
-
-  const {
-    step,
-    selectedDate,
-    selectedTimeSlot,
-    selectedTickets,
-    selectDate,
-    selectTimeSlot,
-    selectTickets,
-    goToNextStep,
-    goToPreviousStep,
-    totalAmount,
-    canProceed,
-    error,
-    setError,
-  } = useBookingFlow(exhibitionId);
+  }, [action, exhibitionId, selectDate, selectTimeSlot, selectTickets]);
 
   const handleProceedToCheckout = async () => {
     if (!selectedDate || !selectedTimeSlot || selectedTickets.length === 0) {
