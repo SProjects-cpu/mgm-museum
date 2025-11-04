@@ -25,7 +25,14 @@ export default function LoginPage() {
   });
 
   const handleRedirect = () => {
-    const fullRedirect = action ? `${redirect}?action=${action}` : redirect;
+    // Only append action if redirect doesn't already have query params
+    // This prevents conflicts with cart checkout flow
+    let fullRedirect = redirect;
+    
+    if (action && !redirect.includes('?')) {
+      fullRedirect = `${redirect}?action=${action}`;
+    }
+    
     console.log('Redirecting to:', fullRedirect);
     // Use router.replace to prevent back button issues
     router.replace(fullRedirect);
