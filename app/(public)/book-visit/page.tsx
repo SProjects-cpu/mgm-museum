@@ -104,6 +104,7 @@ export default function BookVisitPage() {
         toast.info('Please login to continue with your booking');
         const redirectUrl = `/book-visit?exhibitionId=${exhibitionId}&exhibitionName=${encodeURIComponent(exhibitionName)}&action=checkout`;
         router.push(`/login?redirect=${encodeURIComponent(redirectUrl)}`);
+        setAddingToCart(false);
         return;
       }
       // Convert selected tickets to the format expected by cart
