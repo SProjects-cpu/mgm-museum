@@ -1,7 +1,8 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase/config';
-import { verifyPaymentSignature, fetchPaymentDetails } from '@/lib/razorpay/client';
+import { verifyPaymentSignature } from '@/lib/razorpay/utils';
+import { fetchPaymentDetails } from '@/lib/razorpay/client';
 import crypto from 'crypto';
 
 export async function POST(request: NextRequest) {

@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { getServiceSupabase } from '@/lib/supabase/client';
-import { razorpay } from '@/lib/razorpay/config';
+import { getRazorpayInstance } from '@/lib/razorpay/client';
 
 /**
  * POST /api/admin/bookings/[id]/refund
@@ -72,6 +72,7 @@ export async function POST(
     // Process refund via Razorpay
     let refund;
     try {
+      const razorpay = await getRazorpayInstance();
       refund = await razorpay.payments.refund(booking.razorpay_payment_id, {
         amount: refundAmount,
         notes: {
