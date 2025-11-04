@@ -24,6 +24,13 @@ export default function LoginPage() {
     name: '',
   });
 
+  const handleRedirect = () => {
+    const fullRedirect = action ? `${redirect}?action=${action}` : redirect;
+    console.log('Redirecting to:', fullRedirect);
+    // Use router.replace to prevent back button issues
+    router.replace(fullRedirect);
+  };
+
   // Check if already logged in
   useEffect(() => {
     const checkAuth = async () => {
@@ -33,13 +40,18 @@ export default function LoginPage() {
       }
     };
     checkAuth();
-  }, []);
 
-  const handleRedirect = () => {
-    const fullRedirect = action ? `${redirect}?action=${action}` : redirect;
-    // Use router.replace to prevent back button issues
-    router.replace(fullRedirect);
-  };
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        handleRedirect();
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [redirect, action]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,7 +80,10 @@ export default function LoginPage() {
         } else if (data.user && data.session) {
           // Auto-login successful (email confirmation disabled)
           toast.success('Account created successfully!');
-          handleRedirect();
+          // Small delay to ensure session is set
+          setTimeout(() => {
+            handleRedirect();
+          }, 100);
         }
       } else {
         // Sign in
@@ -81,7 +96,10 @@ export default function LoginPage() {
 
         if (data.user) {
           toast.success('Login successful!');
-          handleRedirect();
+          // Small delay to ensure session is set
+          setTimeout(() => {
+            handleRedirect();
+          }, 100);
         }
       }
     } catch (error: any) {
