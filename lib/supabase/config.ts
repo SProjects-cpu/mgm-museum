@@ -1,39 +1,6 @@
 // @ts-nocheck
-// import { createClient } from '@supabase/supabase-js'; // REMOVED PACKAGE
+import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/database';
-
-// Mock createClient function since package was removed
-function createClient(url: string, key: string, options?: any) {
-  return {
-    from: (table: string) => ({
-      select: (columns?: string, options?: any) => Promise.resolve({ data: [], error: null, count: 0 }),
-      insert: (data: any) => Promise.resolve({ data: null, error: null }),
-      update: (data: any) => Promise.resolve({ data: null, error: null }),
-      delete: () => Promise.resolve({ data: null, error: null }),
-      upsert: (data: any) => Promise.resolve({ data: null, error: null }),
-      eq: function(column: string, value: any) { return this; },
-      single: () => Promise.resolve({ data: null, error: null }),
-      order: function(column: string, options?: any) { return this; },
-    }),
-    channel: (name: string) => ({
-      on: (event: string, filter: any, callback: any) => ({
-        subscribe: (callback?: any) => ({ unsubscribe: () => {} })
-      }),
-    }),
-    auth: {
-      getSession: () => Promise.resolve({ data: { session: null }, error: null }),
-      getUser: () => Promise.resolve({ data: { user: null }, error: null }),
-      signIn: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
-      signOut: () => Promise.resolve({ error: null }),
-    },
-    storage: {
-      from: (bucket: string) => ({
-        upload: () => Promise.resolve({ data: null, error: new Error('Supabase not configured') }),
-        getPublicUrl: (path: string) => ({ data: { publicUrl: '' } }),
-      }),
-    },
-  } as any;
-}
 
 // Environment variables validation
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
@@ -65,29 +32,44 @@ const dummyClient = {
   },
 } as any;
 
-// Client-side Supabase client (browser)
-// DISABLED: Causing WebSocket errors - use dummy client always
-export const supabase = dummyClient;
+// Client-side Supabase client (browser) with REALTIME DISABLED
+export const supabase = isSupabaseConfigured 
+  ? createClient<Database>(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true,
+      },
+      realtime: {
+        params: {
+          eventsPerSecond: 0, // DISABLE REALTIME - No WebSocket connections
+        },
+      },
+    })
+  : dummyClient;
 
-// Original code (disabled):
-// export const supabase = isSupabaseConfigured 
-//   ? createClient<Database>(supabaseUrl, supabaseAnonKey, {
-//       auth: {
-//         persistSession: true,
-//         autoRefreshToken: true,
-//         detectSessionInUrl: true,
-//       },
-//     })
-//   : dummyClient;
+// Prevent any automatic channel subscriptions
+if (isSupabaseConfigured && typeof window !== 'undefined') {
+  // Remove all channels on client initialization
+  supabase.removeAllChannels?.();
+}
 
 // Server-side Supabase client with service role
-// DISABLED: Returns dummy client to prevent errors
 export function getServiceSupabase() {
-  // Return dummy client instead of throwing error
-  return createClient(supabaseUrl || 'https://dummy.supabase.co', supabaseServiceRoleKey || 'dummy-key', {
+  if (!isSupabaseConfigured || !supabaseServiceRoleKey) {
+    console.warn('Supabase service role key not configured');
+    return dummyClient;
+  }
+
+  return createClient<Database>(supabaseUrl, supabaseServiceRoleKey, {
     auth: {
       persistSession: false,
       autoRefreshToken: false,
+    },
+    realtime: {
+      params: {
+        eventsPerSecond: 0, // DISABLE REALTIME on server too
+      },
     },
   });
 }
@@ -128,47 +110,15 @@ export async function validateDatabaseConnection(): Promise<{
   }
 }
 
-// Real-time subscription helper with error handling
+// DISABLED: Real-time subscription helper
+// Realtime is disabled to prevent WebSocket errors
 export function subscribeToChanges<T>(
   table: string,
   callback: (payload: T) => void,
   filter?: string
 ) {
-  try {
-    const channel = supabase.channel(`${table}-changes`);
-
-    const subscription = channel.on(
-      'postgres_changes',
-      {
-        event: '*',
-        schema: 'public',
-        table,
-        filter,
-      },
-      (payload) => {
-        try {
-          callback(payload.new as T);
-        } catch (error) {
-          console.error(`Error in realtime callback for ${table}:`, error);
-        }
-      }
-    );
-
-    subscription.subscribe((status) => {
-      if (status === 'SUBSCRIBED') {
-        console.log(`Successfully subscribed to ${table} changes`);
-      } else if (status === 'CHANNEL_ERROR') {
-        console.error(`Error subscribing to ${table} changes:`, status);
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  } catch (error) {
-    console.error(`Error setting up realtime subscription for ${table}:`, error);
-    return () => {}; // Return empty cleanup function
-  }
+  console.warn('Realtime subscriptions are disabled. Use manual refresh instead.');
+  return () => {}; // Return empty cleanup function
 }
 
 // Helper to check if user is admin
@@ -244,6 +194,13 @@ export async function uploadToStorage(
     return { success: false, error: error.message };
   }
 }
+
+// Export configuration status
+export const supabaseConfig = {
+  isConfigured: isSupabaseConfigured,
+  hasServiceRole: !!supabaseServiceRoleKey,
+  realtimeEnabled: false, // Always false - realtime is disabled
+};
 
 // Export types
 export type { Database };
