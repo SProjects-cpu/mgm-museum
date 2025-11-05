@@ -28,8 +28,8 @@ export default function BookingConfirmationPage() {
           .from('bookings')
           .select(`
             *,
-            exhibitions:exhibition_id (title),
-            shows:show_id (title),
+            exhibitions:exhibition_id (name),
+            shows:show_id (name),
             time_slots:time_slot_id (start_time, end_time, slot_date)
           `)
           .in('id', bookingIds);
@@ -118,7 +118,7 @@ export default function BookingConfirmationPage() {
               <div key={booking.id} className="mb-6 p-6 border rounded-lg bg-white shadow-sm">
                 {/* Event Title */}
                 <h3 className="text-lg font-bold mb-4 text-primary">
-                  {booking.exhibitions?.title || booking.shows?.title || 'Museum Visit'}
+                  {booking.exhibitions?.name || booking.shows?.name || 'Museum Visit'}
                 </h3>
 
                 {/* Booking Details Grid */}
