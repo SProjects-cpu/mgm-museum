@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { verifyPaymentSignature, generateBookingReference } from '@/lib/razorpay/utils';
+import { sendBookingConfirmation } from '@/lib/email/send-booking-confirmation';
 
 export async function POST(request: NextRequest) {
   try {
@@ -264,6 +265,65 @@ export async function POST(request: NextRequest) {
         },
         { status: 500 }
       );
+    }
+
+    // Send booking confirmation email
+    if (bookings.length > 0 && bookings[0]) {
+      const firstBooking = bookings[0];
+      const guestEmail = paymentOrder.payment_email || user.email;
+      
+      // Get event details
+      const { data: eventData } = await supabase
+        .from('bookings')
+        .select(`
+          exhibitions:exhibition_id (name),
+          shows:show_id (name),
+          time_slots:time_slot_id (start_time, end_time, slot_date)
+        `)
+        .eq('id', firstBooking.id)
+        .single();
+
+      if (eventData && guestEmail) {
+        const exhibitions = eventData.exhibitions as any;
+        const shows = eventData.shows as any;
+        const timeSlots = eventData.time_slots as any;
+        
+        const eventTitle = exhibitions?.name || shows?.name || 'Museum Visit';
+        
+        if (timeSlots) {
+          const visitDate = new Date(timeSlots.slot_date).toLocaleDateString('en-US', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          });
+          
+          const formatTime = (time: string) => {
+            const [hours, minutes] = time.split(':').map(Number);
+            const period = hours >= 12 ? 'PM' : 'AM';
+            const displayHours = hours % 12 || 12;
+            return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
+          };
+          
+          const timeSlot = `${formatTime(timeSlots.start_time)} - ${formatTime(timeSlots.end_time)}`;
+          
+          // Send email (don't block response if email fails)
+          sendBookingConfirmation({
+            to: guestEmail,
+            guestName: firstBooking.guest_name,
+            bookingReference: firstBooking.booking_reference,
+            eventTitle,
+            visitDate,
+            timeSlot,
+            totalAmount: Number(firstBooking.total_amount),
+            ticketCount: bookings.length,
+            paymentId: razorpay_payment_id,
+          }).catch((error) => {
+            console.error('Failed to send confirmation email:', error);
+            // Don't fail the request if email fails
+          });
+        }
+      }
     }
 
     return NextResponse.json({
