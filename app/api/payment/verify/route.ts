@@ -70,6 +70,33 @@ export async function POST(request: NextRequest) {
 
     console.log('Verifying payment for user:', user.id);
 
+    // Ensure user exists in public.users table
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', user.id)
+      .single();
+
+    if (!existingUser) {
+      console.log('Creating user record in public.users for:', user.id);
+      const { error: userError } = await supabase
+        .from('users')
+        .insert({
+          id: user.id,
+          email: user.email || '',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+      
+      if (userError) {
+        console.error('Failed to create user record:', userError);
+        return NextResponse.json(
+          { success: false, message: 'Failed to create user account' },
+          { status: 500 }
+        );
+      }
+    }
+
     // Fetch payment order from database
     const { data: paymentOrder, error: fetchError } = await supabase
       .from('payment_orders')
