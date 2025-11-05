@@ -241,11 +241,11 @@ export const TicketPDFDocument: React.FC<TicketPDFProps> = ({
           <Image src={qrCodeDataUrl} style={styles.qrCode} />
           <View style={styles.eventDetails}>
             <Text style={styles.eventTitle}>{eventTitle}</Text>
-            <Text style={styles.eventInfo}>📅 {visitDate}</Text>
-            <Text style={styles.eventInfo}>🕐 {timeSlot}</Text>
+            <Text style={styles.eventInfo}>Date: {visitDate}</Text>
+            <Text style={styles.eventInfo}>Time: {timeSlot}</Text>
             {booking.pricing_tier && (
               <Text style={styles.eventInfo}>
-                🎫 {booking.pricing_tier.quantity} × {booking.pricing_tier.name}
+                Tickets: {booking.pricing_tier.quantity} × {booking.pricing_tier.name}
               </Text>
             )}
           </View>
