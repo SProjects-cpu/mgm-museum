@@ -2,8 +2,7 @@
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Calendar, Clock, Users, Trash2, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, Users, Trash2 } from 'lucide-react';
 import type { CartItem } from '@/lib/store/cart';
 
 interface CartItemCardProps {
@@ -14,20 +13,6 @@ interface CartItemCardProps {
 }
 
 export function CartItemCard({ item, timeRemaining, onRemove, isRemoving }: CartItemCardProps) {
-  // Format countdown timer
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  // Determine badge color based on time remaining
-  const getBadgeVariant = () => {
-    if (timeRemaining < 120) return 'destructive'; // < 2 min
-    if (timeRemaining < 300) return 'default'; // < 5 min
-    return 'secondary';
-  };
-
   // Format date
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -100,18 +85,7 @@ export function CartItemCard({ item, timeRemaining, onRemove, isRemoving }: Cart
         </div>
 
         {/* Footer */}
-        <div className="flex justify-between items-center mt-4 pt-4 border-t">
-          {/* Countdown Timer */}
-          <div className="flex items-center gap-2">
-            <Badge variant={getBadgeVariant()} className="flex items-center gap-1">
-              <Clock className="w-3 h-3" />
-              {formatTime(timeRemaining)}
-            </Badge>
-            {timeRemaining < 300 && (
-              <AlertCircle className="w-4 h-4 text-orange-600" />
-            )}
-          </div>
-
+        <div className="flex justify-end items-center mt-4 pt-4 border-t">
           {/* Subtotal */}
           <div className="text-right">
             <p className="text-xs text-muted-foreground">Subtotal</p>

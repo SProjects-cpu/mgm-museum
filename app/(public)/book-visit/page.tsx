@@ -8,7 +8,7 @@ import { TimeSlotSelector } from '@/components/booking/TimeSlotSelector';
 import { TicketTypeSelector } from '@/components/booking/TicketTypeSelector';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
-import { ArrowLeft, ArrowRight, Calendar, Clock, Ticket, CreditCard, Loader2 } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Calendar, Clock, Ticket, CreditCard, Loader2, ShoppingCart } from 'lucide-react';
 import { useCartStore } from '@/lib/store/cart';
 import { supabase } from '@/lib/supabase/config';
 import { toast } from 'sonner';
@@ -168,9 +168,19 @@ export default function BookVisitPage() {
             <p className="text-lg text-muted-foreground">{exhibitionName}</p>
           </div>
           {user && (
-            <Button variant="outline" onClick={handleLogout}>
-              Logout
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={() => router.push('/cart/checkout')}
+                title="View Cart"
+              >
+                <ShoppingCart className="w-4 h-4" />
+              </Button>
+              <Button variant="outline" onClick={handleLogout}>
+                Logout
+              </Button>
+            </div>
           )}
         </div>
 

@@ -138,8 +138,10 @@ export function PricingManagerWrapper({ exhibitionId }: Props) {
 
       toast.success('Pricing updated successfully');
       
-      // Refresh pricing data
-      await fetchPricing();
+      // Force refresh pricing data with a small delay to ensure database updates are complete
+      setTimeout(async () => {
+        await fetchPricing();
+      }, 500);
     } catch (err: any) {
       toast.error(err.message || 'Failed to update pricing');
       // Revert to previous state
