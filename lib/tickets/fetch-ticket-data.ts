@@ -40,11 +40,11 @@ export async function fetchTicketData(
         show_id,
         time_slot_id,
         exhibitions:exhibition_id (
-          title,
+          name,
           description
         ),
         shows:show_id (
-          title,
+          name,
           description
         ),
         time_slots:time_slot_id (
@@ -158,11 +158,11 @@ function isValidUUID(uuid: string): boolean {
  * @returns Event title or 'Museum Visit'
  */
 export function getEventTitle(booking: BookingData): string {
-  if (booking.exhibitions?.title) {
-    return booking.exhibitions.title;
+  if (booking.exhibitions?.name) {
+    return booking.exhibitions.name;
   }
-  if (booking.shows?.title) {
-    return booking.shows.title;
+  if (booking.shows?.name) {
+    return booking.shows.name;
   }
   return 'Museum Visit';
 }

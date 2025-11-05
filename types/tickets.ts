@@ -19,11 +19,11 @@ export interface BookingData {
   show_id: string | null;
   time_slot_id: string;
   exhibitions?: {
-    title: string;
+    name: string;
     description: string;
   } | null;
   shows?: {
-    title: string;
+    name: string;
     description: string;
   } | null;
   time_slots: {
