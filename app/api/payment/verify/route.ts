@@ -173,6 +173,15 @@ export async function POST(request: NextRequest) {
         bookingDate: item.bookingDate,
       });
 
+      // Get time slot date for accurate booking date
+      const { data: timeSlot } = await supabase
+        .from('time_slots')
+        .select('slot_date')
+        .eq('id', item.timeSlotId)
+        .single();
+
+      const actualBookingDate = timeSlot?.slot_date || item.bookingDate;
+
       // Create booking
       const { data: booking, error: bookingError } = await supabase
         .from('bookings')
@@ -182,8 +191,8 @@ export async function POST(request: NextRequest) {
           time_slot_id: item.timeSlotId,
           exhibition_id: item.exhibitionId || null,
           show_id: item.showId || null,
-          booking_date: item.bookingDate,
-          guest_name: paymentOrder.payment_email || user.email,
+          booking_date: actualBookingDate,
+          guest_name: (paymentOrder as any).payment_name || paymentOrder.payment_email || user.email,
           guest_email: paymentOrder.payment_email || user.email,
           guest_phone: paymentOrder.payment_contact || null,
           total_amount: item.subtotal || 0,
@@ -308,6 +317,7 @@ export async function POST(request: NextRequest) {
           const timeSlot = `${formatTime(timeSlots.start_time)} - ${formatTime(timeSlots.end_time)}`;
           
           // Send email (don't block response if email fails)
+          console.log('Attempting to send confirmation email to:', guestEmail);
           sendBookingConfirmation({
             to: guestEmail,
             guestName: firstBooking.guest_name,
@@ -318,10 +328,17 @@ export async function POST(request: NextRequest) {
             totalAmount: Number(firstBooking.total_amount),
             ticketCount: bookings.length,
             paymentId: razorpay_payment_id,
-          }).catch((error) => {
-            console.error('Failed to send confirmation email:', error);
-            // Don't fail the request if email fails
-          });
+          })
+            .then((result) => {
+              if (result.success) {
+                console.log('Confirmation email sent successfully to:', guestEmail);
+              } else {
+                console.error('Failed to send confirmation email:', result.error);
+              }
+            })
+            .catch((error) => {
+              console.error('Exception while sending confirmation email:', error);
+            });
         }
       }
     }
