@@ -18,6 +18,7 @@ export interface BookingData {
   exhibition_id: string | null;
   show_id: string | null;
   time_slot_id: string;
+  created_at?: string; // Booking timestamp
   exhibitions?: {
     name: string;
     description: string;

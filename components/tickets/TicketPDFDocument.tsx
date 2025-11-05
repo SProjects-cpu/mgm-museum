@@ -189,6 +189,20 @@ function formatDate(dateString: string): string {
 }
 
 /**
+ * Format timestamp for display (YYYY-MM-DD HH:mm:ss)
+ */
+function formatTimestamp(timestamp: string): string {
+  const date = new Date(timestamp);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
+/**
  * Format currency
  */
 function formatCurrency(amount: number): string {
@@ -293,6 +307,16 @@ export const TicketPDFDocument: React.FC<TicketPDFProps> = ({
             )}
           </View>
         </View>
+
+        {/* Booking Timestamp */}
+        {booking.created_at && (
+          <View style={styles.section}>
+            <View style={styles.row}>
+              <Text style={styles.label}>Booking Timestamp:</Text>
+              <Text style={styles.value}>{formatTimestamp(booking.created_at)}</Text>
+            </View>
+          </View>
+        )}
 
         {/* Amount Paid */}
         <View style={styles.amountBox}>

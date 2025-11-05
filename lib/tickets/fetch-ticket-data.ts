@@ -39,6 +39,7 @@ export async function fetchTicketData(
         exhibition_id,
         show_id,
         time_slot_id,
+        created_at,
         exhibitions:exhibition_id (
           name,
           description
@@ -125,6 +126,7 @@ export async function fetchTicketData(
       exhibition_id: booking.exhibition_id,
       show_id: booking.show_id,
       time_slot_id: booking.time_slot_id,
+      created_at: booking.created_at,
       exhibitions: booking.exhibitions as any,
       shows: booking.shows as any,
       time_slots: booking.time_slots as any,
