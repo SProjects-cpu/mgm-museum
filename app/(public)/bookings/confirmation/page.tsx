@@ -48,12 +48,33 @@ export default function BookingConfirmationPage() {
   }, [bookingIds, router]);
 
   const handleDownloadTicket = async (bookingId: string, bookingRef: string) => {
+    const downloadStartTime = Date.now();
     setDownloadingId(bookingId);
+
+    // Track download start
+    console.log('[ANALYTICS] Client Download Started:', {
+      event: 'client_download_start',
+      bookingId,
+      bookingReference: bookingRef,
+      timestamp: new Date().toISOString(),
+      userAgent: window.navigator.userAgent,
+    });
+
     try {
       // Get user session
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         toast.error('Please log in to download your ticket');
+        
+        // Track authentication error
+        console.error('[ANALYTICS] Client Download Error:', {
+          event: 'client_download_error',
+          bookingId,
+          bookingReference: bookingRef,
+          errorMessage: 'No active session',
+          timestamp: new Date().toISOString(),
+        });
+        
         return;
       }
 
@@ -66,7 +87,19 @@ export default function BookingConfirmationPage() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || 'Failed to generate ticket');
+        const errorMessage = errorData.message || 'Failed to generate ticket';
+        
+        // Track API error
+        console.error('[ANALYTICS] Client Download Error:', {
+          event: 'client_download_error',
+          bookingId,
+          bookingReference: bookingRef,
+          errorMessage,
+          statusCode: response.status,
+          timestamp: new Date().toISOString(),
+        });
+        
+        throw new Error(errorMessage);
       }
 
       // Download the PDF
@@ -80,9 +113,29 @@ export default function BookingConfirmationPage() {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
 
+      // Track successful download
+      const downloadTime = Date.now() - downloadStartTime;
+      console.log('[ANALYTICS] Client Download Complete:', {
+        event: 'client_download_complete',
+        bookingId,
+        bookingReference: bookingRef,
+        downloadTimeMs: downloadTime,
+        timestamp: new Date().toISOString(),
+      });
+
       toast.success('Ticket downloaded successfully!');
     } catch (error) {
       console.error('Download failed:', error);
+      
+      // Track download error
+      console.error('[ANALYTICS] Client Download Error:', {
+        event: 'client_download_error',
+        bookingId,
+        bookingReference: bookingRef,
+        errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString(),
+      });
+      
       toast.error(error instanceof Error ? error.message : 'Failed to download ticket');
     } finally {
       setDownloadingId(null);
