@@ -132,6 +132,7 @@ export async function POST(request: NextRequest) {
 
     const bookings: any[] = [];
     const tickets: any[] = [];
+    const errors: any[] = [];
 
     for (const item of cartItems) {
       // Generate booking reference using utility function
@@ -170,7 +171,15 @@ export async function POST(request: NextRequest) {
       if (bookingError) {
         console.error('Failed to create booking:', {
           error: bookingError,
+          errorCode: bookingError.code,
+          errorMessage: bookingError.message,
+          errorDetails: bookingError.details,
           item: item,
+        });
+        errors.push({
+          item: item.exhibitionName || item.showName,
+          error: bookingError.message,
+          code: bookingError.code,
         });
         continue;
       }
@@ -206,12 +215,26 @@ export async function POST(request: NextRequest) {
       bookingsCreated: bookings.length,
       ticketsCreated: tickets.length,
       bookingIds: bookings.map(b => b.id),
+      errors: errors,
     });
 
     if (bookings.length === 0) {
-      console.error('No bookings were created despite successful payment');
+      console.error('No bookings were created despite successful payment', {
+        totalItems: cartItems.length,
+        errors: errors,
+      });
+      
+      // Return detailed error message
+      const errorMessage = errors.length > 0
+        ? `Booking creation failed: ${errors[0].error} (Code: ${errors[0].code})`
+        : 'Failed to create bookings. Please contact support.';
+      
       return NextResponse.json(
-        { success: false, message: 'Failed to create bookings. Please contact support.' },
+        { 
+          success: false, 
+          message: errorMessage,
+          details: errors,
+        },
         { status: 500 }
       );
     }
