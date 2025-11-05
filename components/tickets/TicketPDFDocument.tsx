@@ -220,7 +220,8 @@ export const TicketPDFDocument: React.FC<TicketPDFProps> = ({
 }) => {
   const eventTitle = getEventTitle(booking);
   const timeSlot = formatTimeSlot(booking.time_slots);
-  const visitDate = formatDate(booking.time_slots.slot_date);
+  // Use slot_date if available, otherwise fall back to booking_date
+  const visitDate = formatDate(booking.time_slots.slot_date || booking.booking_date);
   const ticketNumber = booking.tickets[0]?.ticket_number || 'N/A';
 
   return (
