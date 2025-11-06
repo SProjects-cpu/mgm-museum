@@ -190,17 +190,14 @@ function formatDate(dateString: string): string {
 
 /**
  * Format timestamp for display (YYYY-MM-DD HH:mm:ss)
- * Uses UTC time to ensure consistency across timezones
+ * Preserves the exact timestamp from database without timezone conversion
  */
 function formatTimestamp(timestamp: string): string {
-  const date = new Date(timestamp);
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(date.getUTCDate()).padStart(2, '0');
-  const hours = String(date.getUTCHours()).padStart(2, '0');
-  const minutes = String(date.getUTCMinutes()).padStart(2, '0');
-  const seconds = String(date.getUTCSeconds()).padStart(2, '0');
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  // Parse the timestamp string directly to avoid timezone issues
+  // Expected format: "2025-11-05T18:05:49.105661+00:00" or "2025-11-05 18:05:49.105661+00"
+  const cleanTimestamp = timestamp.replace(' ', 'T').split('.')[0]; // Remove milliseconds
+  const [datePart, timePart] = cleanTimestamp.split('T');
+  return `${datePart} ${timePart}`;
 }
 
 /**

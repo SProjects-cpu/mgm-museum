@@ -192,7 +192,7 @@ export async function POST(request: NextRequest) {
           exhibition_id: item.exhibitionId || null,
           show_id: item.showId || null,
           booking_date: actualBookingDate,
-          guest_name: (paymentOrder as any).payment_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Guest',
+          guest_name: (paymentOrder as any).payment_name || user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Guest',
           guest_email: paymentOrder.payment_email || user.email,
           guest_phone: paymentOrder.payment_contact || null,
           total_amount: item.subtotal || 0,
