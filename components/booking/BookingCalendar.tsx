@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAutoRefresh } from '@/lib/hooks/useAutoRefresh';
 import { DateAvailability } from '@/lib/api/booking-queries';
-import { InspirationalCalendar } from '@/components/ui/inspirational-calendar';
+import ArkCalendar from '@/components/ui/calendar-ark';
 import { Skeleton } from '@/components/ui/skeleton';
 
 interface BookingCalendarProps {
@@ -46,7 +46,7 @@ export function BookingCalendar({
   useAutoRefresh(fetchAvailableDates, 30000);
 
   if (loading && availableDates.length === 0) {
-    return <Skeleton className="h-[450px] w-full" />;
+    return <Skeleton className="h-[400px] w-full" />;
   }
 
   if (error) {
@@ -57,48 +57,35 @@ export function BookingCalendar({
     );
   }
 
-  // Get current date info
-  const currentDate = new Date();
-  const currentMonth = currentDate.toLocaleString("default", { month: "long" });
-  const currentYear = currentDate.getFullYear();
-  const firstDayOfMonth = new Date(currentYear, currentDate.getMonth(), 1);
-  const firstDayOfWeek = firstDayOfMonth.getDay();
-  const daysInMonth = new Date(
-    currentYear,
-    currentDate.getMonth() + 1,
-    0
-  ).getDate();
-
   // Convert availableDates to array of date strings
   const availableDateStrings = availableDates
-    .filter(d => d.isAvailable && !d.isFull)
-    .map(d => d.date);
+    .filter((d) => d.isAvailable && !d.isFull)
+    .map((d) => d.date);
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
 
   return (
     <div className="space-y-4">
-      <InspirationalCalendar
-        currentMonth={currentMonth}
-        currentYear={currentYear}
-        daysInMonth={daysInMonth}
-        firstDayOfWeek={firstDayOfWeek}
-        availableDates={availableDateStrings}
-        selectedDate={selectedDate}
-        onDateSelect={onDateSelect}
-        title="Select Your Visit Date"
-        description="Choose an available date to continue your booking"
-        showBookButton={false}
-      />
-      <div className="flex gap-4 text-sm justify-center">
+      <div className="flex justify-center">
+        <ArkCalendar
+          selectedDate={selectedDate}
+          onDateSelect={onDateSelect}
+          availableDates={availableDateStrings}
+          minDate={today}
+        />
+      </div>
+      <div className="flex gap-4 text-sm justify-center flex-wrap">
         <div className="flex items-center gap-2">
           <div className="w-4 h-4 bg-indigo-500 rounded" />
           <span>Available</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-gray-300 rounded" />
+          <div className="w-4 h-4 bg-gray-300 dark:bg-gray-600 rounded" />
           <span>Unavailable</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="w-4 h-4 bg-indigo-600 rounded" />
+          <div className="w-4 h-4 bg-indigo-700 rounded ring-2 ring-indigo-500" />
           <span>Selected</span>
         </div>
       </div>
