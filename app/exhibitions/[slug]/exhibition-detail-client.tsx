@@ -44,6 +44,19 @@ export function ExhibitionDetailClient({ exhibition }: Props) {
 
   const today = new Date().toISOString().split("T")[0];
 
+  // Get booking widget content from database or use defaults
+  const bookingWidget = exhibition.contentSections?.find(
+    (section: any) => section.section_type === 'booking_widget'
+  );
+  
+  const widgetTitle = bookingWidget?.title || 'Book Your Visit';
+  const widgetDescription = bookingWidget?.content || 'Select your preferred date and time';
+  const widgetFeatures = bookingWidget?.images || [
+    'Instant confirmation',
+    'Free cancellation up to 24 hours',
+    'Mobile ticket accepted'
+  ];
+
   return (
     <div className="min-h-screen py-12">
       <div className="container px-4">
@@ -238,9 +251,9 @@ export function ExhibitionDetailClient({ exhibition }: Props) {
             >
               <Card className="shadow-xl border-2">
                 <CardHeader>
-                  <CardTitle>Book Your Visit</CardTitle>
+                  <CardTitle>{widgetTitle}</CardTitle>
                   <p className="text-sm text-muted-foreground">
-                    Select your preferred date and time
+                    {widgetDescription}
                   </p>
                 </CardHeader>
                 <CardContent className="space-y-6">
@@ -306,20 +319,14 @@ export function ExhibitionDetailClient({ exhibition }: Props) {
                     <ArrowRight className="w-5 h-5" />
                   </Button>
 
-                  {/* Info */}
+                  {/* Info - Dynamic features from admin panel */}
                   <div className="space-y-2 pt-4 border-t text-sm text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                      <div className="w-1 h-1 rounded-full bg-primary" />
-                      <span>Instant confirmation</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-1 h-1 rounded-full bg-primary" />
-                      <span>Free cancellation up to 24 hours</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <div className="w-1 h-1 rounded-full bg-primary" />
-                      <span>Mobile ticket accepted</span>
-                    </div>
+                    {widgetFeatures.map((feature: string, index: number) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <div className="w-1 h-1 rounded-full bg-primary" />
+                        <span>{feature}</span>
+                      </div>
+                    ))}
                   </div>
                 </CardContent>
               </Card>

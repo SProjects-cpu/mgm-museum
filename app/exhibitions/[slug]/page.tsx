@@ -24,6 +24,16 @@ async function getExhibition(slug: string) {
       return null;
     }
 
+    // Fetch content sections for this exhibition (for dynamic booking widget)
+    const { data: contentSections } = await supabase
+      .from('exhibition_content_sections')
+      .select('*')
+      .eq('exhibition_id', exhibition.id)
+      .eq('active', true)
+      .order('display_order');
+
+    exhibition.contentSections = contentSections || [];
+
     return exhibition;
   } catch (error) {
     console.error('Error fetching exhibition:', error);
