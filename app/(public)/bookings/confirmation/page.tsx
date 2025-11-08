@@ -33,6 +33,13 @@ export default function BookingConfirmationPage() {
             time_slots:time_slot_id (start_time, end_time, slot_date)
           `)
           .in('id', bookingIds);
+        
+        console.log('Fetched bookings with dates:', data?.map(b => ({
+          id: b.id,
+          booking_date: b.booking_date,
+          booking_time: b.booking_time,
+          slot_date: b.time_slots?.slot_date,
+        })));
 
         if (error) throw error;
         setBookings(data || []);
@@ -188,34 +195,56 @@ export default function BookingConfirmationPage() {
                   
                   <div className="font-semibold text-muted-foreground">Date:</div>
                   <div>
-                    {booking.time_slots?.slot_date 
-                      ? new Date(booking.time_slots.slot_date).toLocaleDateString('en-US', {
-                          weekday: 'long',
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                        })
-                      : new Date(booking.booking_date).toLocaleDateString()}
+                    {(() => {
+                      // Priority 1: Use slot_date from time_slots (most accurate)
+                      const dateToUse = booking.time_slots?.slot_date || booking.booking_date;
+                      return new Date(dateToUse).toLocaleDateString('en-US', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                      });
+                    })()}
                   </div>
                   
-                  {booking.time_slots && (
-                    <>
-                      <div className="font-semibold text-muted-foreground">Time:</div>
-                      <div>
-                        {new Date(`2000-01-01T${booking.time_slots.start_time}`).toLocaleTimeString('en-US', {
+                  <div className="font-semibold text-muted-foreground">Time:</div>
+                  <div>
+                    {(() => {
+                      // Priority 1: Use time_slots data if available
+                      if (booking.time_slots?.start_time && booking.time_slots?.end_time) {
+                        const startTime = new Date(`2000-01-01T${booking.time_slots.start_time}`).toLocaleTimeString('en-US', {
                           hour: 'numeric',
                           minute: '2-digit',
                           hour12: true,
-                        })}
-                        {' - '}
-                        {new Date(`2000-01-01T${booking.time_slots.end_time}`).toLocaleTimeString('en-US', {
+                        });
+                        const endTime = new Date(`2000-01-01T${booking.time_slots.end_time}`).toLocaleTimeString('en-US', {
                           hour: 'numeric',
                           minute: '2-digit',
                           hour12: true,
-                        })}
-                      </div>
-                    </>
-                  )}
+                        });
+                        return `${startTime} - ${endTime}`;
+                      }
+                      
+                      // Priority 2: Use booking_time fallback
+                      if (booking.booking_time) {
+                        const [start, end] = booking.booking_time.split('-');
+                        const startTime = new Date(`2000-01-01T${start}`).toLocaleTimeString('en-US', {
+                          hour: 'numeric',
+                          minute: '2-digit',
+                          hour12: true,
+                        });
+                        const endTime = new Date(`2000-01-01T${end}`).toLocaleTimeString('en-US', {
+                          hour: 'numeric',
+                          minute: '2-digit',
+                          hour12: true,
+                        });
+                        return `${startTime} - ${endTime}`;
+                      }
+                      
+                      // Fallback: Museum hours
+                      return '10:00 AM - 6:00 PM';
+                    })()}
+                  </div>
                   
                   <div className="font-semibold text-muted-foreground">Status:</div>
                   <div className="text-green-600 font-semibold uppercase">{booking.status}</div>

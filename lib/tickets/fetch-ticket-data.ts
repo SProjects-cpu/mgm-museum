@@ -30,6 +30,7 @@ export async function fetchTicketData(
         id,
         booking_reference,
         booking_date,
+        booking_time,
         guest_name,
         guest_email,
         guest_phone,
@@ -108,15 +109,40 @@ export async function fetchTicketData(
       console.warn('Booking missing Razorpay payment ID:', bookingId);
     }
 
+    // Handle missing time_slots gracefully with fallback
     if (!booking.time_slots) {
-      throw new Error('Time slot information not found');
+      console.warn('Time slot information not found, using fallback data:', {
+        bookingId,
+        booking_date: booking.booking_date,
+        booking_time: (booking as any).booking_time,
+      });
+      
+      // Create fallback time_slots from booking_time if available
+      if ((booking as any).booking_time) {
+        const [start_time, end_time] = (booking as any).booking_time.split('-');
+        booking.time_slots = {
+          start_time,
+          end_time,
+          slot_date: booking.booking_date,
+        } as any;
+      } else {
+        // Last resort fallback
+        booking.time_slots = {
+          start_time: '10:00:00',
+          end_time: '18:00:00',
+          slot_date: booking.booking_date,
+        } as any;
+      }
     }
 
     // Construct and return complete booking data
+    // Use slot_date from time_slots if available, otherwise use booking_date
+    const actualBookingDate = booking.time_slots?.slot_date || booking.booking_date;
+    
     const bookingData: BookingData = {
       id: booking.id,
       booking_reference: booking.booking_reference,
-      booking_date: booking.booking_date,
+      booking_date: actualBookingDate, // Use the correct date
       guest_name: booking.guest_name,
       guest_email: booking.guest_email,
       guest_phone: booking.guest_phone,
