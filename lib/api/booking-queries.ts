@@ -163,11 +163,12 @@ export async function getTimeSlots(
   const supabase = getServiceSupabase();
 
   try {
-    // Get time slots for this exhibition
+    // Get time slots for this exhibition on the specific date
     const { data: timeSlots, error: timeSlotsError } = await supabase
       .from('time_slots')
-      .select('id, start_time, end_time, capacity, active')
+      .select('id, start_time, end_time, capacity, active, slot_date')
       .eq('exhibition_id', exhibitionId)
+      .eq('slot_date', date)
       .eq('active', true)
       .order('start_time');
 
