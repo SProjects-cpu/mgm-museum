@@ -179,20 +179,26 @@ export async function POST(request: NextRequest) {
         .eq('id', item.timeSlotId)
         .single();
 
-      if (timeSlotError || !timeSlot) {
-        console.error('Time slot not found for booking:', {
+      if (timeSlotError || !timeSlot || !timeSlot.slot_date) {
+        console.error('Time slot not found or missing slot_date for booking:', {
           timeSlotId: item.timeSlotId,
           error: timeSlotError,
+          timeSlot: timeSlot,
         });
         errors.push({
           item: item.exhibitionName || item.showName,
-          error: 'Time slot not found - cannot create booking',
+          error: 'Time slot not found or missing date - cannot create booking',
           code: 'TIME_SLOT_NOT_FOUND',
         });
         continue;
       }
 
       const actualBookingDate = timeSlot.slot_date; // Always use slot_date from database
+      
+      console.log('Using booking date from time slot:', {
+        timeSlotId: item.timeSlotId,
+        slotDate: actualBookingDate,
+      });
 
       // Create booking
       const { data: booking, error: bookingError } = await supabase
