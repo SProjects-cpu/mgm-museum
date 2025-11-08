@@ -85,8 +85,7 @@ export async function POST(request: NextRequest) {
         .insert({
           id: user.id,
           email: user.email || '',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          // Let database handle timestamps with DEFAULT NOW()
         });
       
       if (userError) {
@@ -128,7 +127,7 @@ export async function POST(request: NextRequest) {
         status: 'paid',
         payment_id: razorpay_payment_id,
         payment_signature: razorpay_signature,
-        updated_at: new Date().toISOString(),
+        // Let database handle updated_at with DEFAULT NOW()
       })
       .eq('id', paymentOrder.id);
 
@@ -173,14 +172,27 @@ export async function POST(request: NextRequest) {
         bookingDate: item.bookingDate,
       });
 
-      // Get time slot date for accurate booking date
-      const { data: timeSlot } = await supabase
+      // Get time slot date for accurate booking date - CRITICAL: Always use slot_date as source of truth
+      const { data: timeSlot, error: timeSlotError } = await supabase
         .from('time_slots')
-        .select('slot_date')
+        .select('slot_date, start_time, end_time')
         .eq('id', item.timeSlotId)
         .single();
 
-      const actualBookingDate = timeSlot?.slot_date || item.bookingDate;
+      if (timeSlotError || !timeSlot) {
+        console.error('Time slot not found for booking:', {
+          timeSlotId: item.timeSlotId,
+          error: timeSlotError,
+        });
+        errors.push({
+          item: item.exhibitionName || item.showName,
+          error: 'Time slot not found - cannot create booking',
+          code: 'TIME_SLOT_NOT_FOUND',
+        });
+        continue;
+      }
+
+      const actualBookingDate = timeSlot.slot_date; // Always use slot_date from database
 
       // Create booking
       const { data: booking, error: bookingError } = await supabase

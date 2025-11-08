@@ -21,7 +21,7 @@ interface TimeSlot {
 interface TimeSlotSelectorProps {
   exhibitionId: string;
   date: Date;
-  onSlotSelect: (slotId: string) => void;
+  onSlotSelect: (slot: TimeSlot) => void;
   selectedSlotId?: string;
 }
 
@@ -95,7 +95,7 @@ export function TimeSlotSelector({
               ? 'border-primary bg-primary/5'
               : 'hover:border-primary/50'
           } ${slot.isFull ? 'opacity-50 cursor-not-allowed' : ''}`}
-          onClick={() => !slot.isFull && onSlotSelect(slot.id)}
+          onClick={() => !slot.isFull && onSlotSelect(slot)}
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">

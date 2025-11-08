@@ -264,14 +264,13 @@ export default function BookVisitPage() {
               <TimeSlotSelector
                 exhibitionId={exhibitionId}
                 date={selectedDate}
-                onSlotSelect={(id) => {
-                  // This is a simplified version - in production, you'd fetch the full slot object
+                onSlotSelect={(slot) => {
                   selectTimeSlot({
-                    id,
-                    startTime: '',
-                    endTime: '',
-                    totalCapacity: 0,
-                    availableCapacity: 0,
+                    id: slot.id,
+                    startTime: slot.startTime,
+                    endTime: slot.endTime,
+                    totalCapacity: slot.totalCapacity,
+                    availableCapacity: slot.availableCapacity,
                   });
                 }}
                 selectedSlotId={selectedTimeSlot?.id}
@@ -284,7 +283,7 @@ export default function BookVisitPage() {
               <h2 className="text-2xl font-bold mb-4">Select Tickets</h2>
               <div className="mb-4 text-muted-foreground">
                 <p>Date: {selectedDate?.toLocaleDateString()}</p>
-                {selectedTimeSlot && (
+                {selectedTimeSlot && selectedTimeSlot.startTime && selectedTimeSlot.endTime && (
                   <p>Time: {selectedTimeSlot.startTime} - {selectedTimeSlot.endTime}</p>
                 )}
               </div>
