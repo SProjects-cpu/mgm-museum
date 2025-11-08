@@ -179,28 +179,61 @@ export async function POST(request: NextRequest) {
         .eq('id', item.timeSlotId)
         .single();
 
+      let actualBookingDate: string;
+      let actualBookingTime: string;
+      let fallbackUsed = false;
+
       if (timeSlotError || !timeSlot || !timeSlot.slot_date) {
-        console.error('Time slot not found or missing slot_date for booking:', {
+        // CRITICAL: Payment has been processed - we MUST create the booking
+        // Use fallback date from cart item or today's date
+        console.warn('⚠️ Time slot not found - using fallback (PAYMENT ALREADY PROCESSED):', {
           timeSlotId: item.timeSlotId,
           error: timeSlotError,
           timeSlot: timeSlot,
+          cartDate: item.date,
+          cartBookingDate: item.bookingDate,
         });
-        errors.push({
-          item: item.exhibitionName || item.showName,
-          error: 'Time slot not found or missing date - cannot create booking',
-          code: 'TIME_SLOT_NOT_FOUND',
+        
+        // Fallback 1: Use date from cart item
+        if (item.date) {
+          actualBookingDate = item.date;
+          fallbackUsed = true;
+        } else if (item.bookingDate) {
+          actualBookingDate = item.bookingDate;
+          fallbackUsed = true;
+        } else {
+          // Fallback 2: Use today's date (last resort)
+          actualBookingDate = new Date().toISOString().split('T')[0];
+          fallbackUsed = true;
+        }
+        
+        // Fallback for booking time
+        if (item.time) {
+          actualBookingTime = item.time;
+        } else if (item.bookingTime) {
+          actualBookingTime = item.bookingTime;
+        } else {
+          actualBookingTime = '10:00:00-18:00:00'; // Default museum hours
+        }
+        
+        console.warn('✅ Using fallback booking data:', {
+          fallbackDate: actualBookingDate,
+          fallbackTime: actualBookingTime,
+          reason: 'Time slot data missing but payment processed - customer MUST get ticket',
         });
-        continue;
+      } else {
+        actualBookingDate = timeSlot.slot_date; // Use slot_date from database
+        actualBookingTime = `${timeSlot.start_time}-${timeSlot.end_time}`;
       }
-
-      const actualBookingDate = timeSlot.slot_date; // Always use slot_date from database
       
-      console.log('Using booking date from time slot:', {
+      console.log('Booking date/time determined:', {
         timeSlotId: item.timeSlotId,
-        slotDate: actualBookingDate,
+        bookingDate: actualBookingDate,
+        bookingTime: actualBookingTime,
+        fallbackUsed: fallbackUsed,
       });
 
-      // Create booking
+      // Create booking - CRITICAL: This MUST succeed after payment
       const { data: booking, error: bookingError } = await supabase
         .from('bookings')
         .insert({
@@ -210,6 +243,7 @@ export async function POST(request: NextRequest) {
           exhibition_id: item.exhibitionId || null,
           show_id: item.showId || null,
           booking_date: actualBookingDate,
+          booking_time: actualBookingTime,
           guest_name: (paymentOrder as any).payment_name || user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Guest',
           guest_email: paymentOrder.payment_email || user.email,
           guest_phone: paymentOrder.payment_contact || null,
