@@ -85,6 +85,8 @@ export async function getAvailableDates(
   const end = endDate || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
   try {
+    console.log('[getAvailableDates] Fetching time slots for:', { exhibitionId, start, end });
+    
     // Get time slots for this exhibition in the date range
     const { data: timeSlots, error: timeSlotsError } = await supabase
       .from('time_slots')
@@ -96,9 +98,15 @@ export async function getAvailableDates(
       .not('slot_date', 'is', null)
       .order('slot_date');
 
-    if (timeSlotsError) throw timeSlotsError;
+    if (timeSlotsError) {
+      console.error('[getAvailableDates] Error fetching time slots:', timeSlotsError);
+      throw timeSlotsError;
+    }
+
+    console.log('[getAvailableDates] Found time slots:', timeSlots?.length || 0);
 
     if (!timeSlots || timeSlots.length === 0) {
+      console.log('[getAvailableDates] No time slots found, returning empty array');
       return [];
     }
 
