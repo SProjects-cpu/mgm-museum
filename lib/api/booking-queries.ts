@@ -164,12 +164,16 @@ export async function getTimeSlots(
 
   try {
     // Get time slots for this exhibition on the specific date
+    // Support both specific date slots and recurring slots (where slot_date is NULL)
+    const selectedDate = new Date(date);
+    const dayOfWeek = selectedDate.getDay(); // 0 = Sunday, 6 = Saturday
+    
     const { data: timeSlots, error: timeSlotsError } = await supabase
       .from('time_slots')
-      .select('id, start_time, end_time, capacity, active, slot_date')
+      .select('id, start_time, end_time, capacity, active, slot_date, day_of_week')
       .eq('exhibition_id', exhibitionId)
-      .eq('slot_date', date)
       .eq('active', true)
+      .or(`slot_date.eq.${date},and(slot_date.is.null,day_of_week.eq.${dayOfWeek}),and(slot_date.is.null,day_of_week.is.null)`)
       .order('start_time');
 
     if (timeSlotsError) {
