@@ -189,18 +189,6 @@ function formatDate(dateString: string): string {
 }
 
 /**
- * Format timestamp for display (YYYY-MM-DD HH:mm:ss)
- * Preserves the exact timestamp from database without timezone conversion
- */
-function formatTimestamp(timestamp: string): string {
-  // Parse the timestamp string directly to avoid timezone issues
-  // Expected format: "2025-11-05T18:05:49.105661+00:00" or "2025-11-05 18:05:49.105661+00"
-  const cleanTimestamp = timestamp.replace(' ', 'T').split('.')[0]; // Remove milliseconds
-  const [datePart, timePart] = cleanTimestamp.split('T');
-  return `${datePart} ${timePart}`;
-}
-
-/**
  * Format currency
  */
 function formatCurrency(amount: number): string {
@@ -307,15 +295,7 @@ export const TicketPDFDocument: React.FC<TicketPDFProps> = ({
           </View>
         </View>
 
-        {/* Booking Timestamp */}
-        {booking.created_at && (
-          <View style={styles.section}>
-            <View style={styles.row}>
-              <Text style={styles.label}>Booking Timestamp:</Text>
-              <Text style={styles.value}>{formatTimestamp(booking.created_at)}</Text>
-            </View>
-          </View>
-        )}
+
 
         {/* Amount Paid */}
         <View style={styles.amountBox}>
