@@ -85,16 +85,22 @@ export async function getAvailableDates(
   const end = endDate || new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
   try {
-    // Get exhibition schedules
-    const { data: schedules, error: scheduleError } = await supabase
-      .from('exhibition_schedules')
-      .select('date, is_available, capacity_override')
+    // Get time slots for this exhibition in the date range
+    const { data: timeSlots, error: timeSlotsError } = await supabase
+      .from('time_slots')
+      .select('slot_date, capacity, active')
       .eq('exhibition_id', exhibitionId)
-      .gte('date', start)
-      .lte('date', end)
-      .order('date');
+      .eq('active', true)
+      .gte('slot_date', start)
+      .lte('slot_date', end)
+      .not('slot_date', 'is', null)
+      .order('slot_date');
 
-    if (scheduleError) throw scheduleError;
+    if (timeSlotsError) throw timeSlotsError;
+
+    if (!timeSlots || timeSlots.length === 0) {
+      return [];
+    }
 
     // Get slot availability for the date range
     const { data: availability, error: availError } = await supabase
@@ -109,37 +115,36 @@ export async function getAvailableDates(
       .gte('date', start)
       .lte('date', end);
 
-    if (availError) throw availError;
+    if (availError) {
+      console.error('Error fetching slot availability:', availError);
+      // Continue without availability data rather than failing
+    }
 
     // Aggregate availability by date
     const dateMap = new Map<string, DateAvailability>();
 
-    // Process schedules
-    schedules?.forEach(schedule => {
-      dateMap.set(schedule.date, {
-        date: schedule.date,
-        isAvailable: schedule.is_available,
-        capacity: schedule.capacity_override || 0,
-        bookedCount: 0,
-        isFull: false,
-      });
+    // Process time slots to get dates with capacity
+    timeSlots.forEach((slot: any) => {
+      const existing = dateMap.get(slot.slot_date);
+      if (existing) {
+        existing.capacity += slot.capacity;
+      } else {
+        dateMap.set(slot.slot_date, {
+          date: slot.slot_date,
+          isAvailable: true,
+          capacity: slot.capacity,
+          bookedCount: 0,
+          isFull: false,
+        });
+      }
     });
 
-    // Process slot availability
+    // Process slot availability to update booked counts
     availability?.forEach((slot: any) => {
       const existing = dateMap.get(slot.date);
       if (existing) {
-        existing.capacity += slot.available_capacity;
         existing.bookedCount += slot.booked_count;
         existing.isFull = existing.bookedCount >= existing.capacity;
-      } else {
-        dateMap.set(slot.date, {
-          date: slot.date,
-          isAvailable: true,
-          capacity: slot.available_capacity,
-          bookedCount: slot.booked_count,
-          isFull: slot.booked_count >= slot.available_capacity,
-        });
       }
     });
 
