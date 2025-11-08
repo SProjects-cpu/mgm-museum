@@ -58,6 +58,7 @@ interface Props {
 }
 
 const SECTION_TYPES = [
+  { value: "booking_widget", label: "Book Your Visit Widget" },
   { value: "features", label: "Features" },
   { value: "highlights", label: "Highlights" },
   { value: "what_to_expect", label: "What to Expect" },
@@ -368,6 +369,31 @@ export function ExhibitionContentManager({ exhibitionId }: Props) {
                   rows={6}
                 />
               </div>
+
+              {/* Special fields for booking_widget section type */}
+              {formData.sectionType === 'booking_widget' && (
+                <>
+                  <div className="space-y-2">
+                    <Label>Features (one per line)</Label>
+                    <Textarea
+                      value={
+                        Array.isArray(formData.images) && formData.images.length > 0
+                          ? formData.images.join('\n')
+                          : 'Instant confirmation\nFree cancellation up to 24 hours\nMobile ticket accepted'
+                      }
+                      onChange={(e) => {
+                        const features = e.target.value.split('\n').filter(f => f.trim());
+                        setFormData({ ...formData, images: features });
+                      }}
+                      placeholder="Instant confirmation&#10;Free cancellation up to 24 hours&#10;Mobile ticket accepted"
+                      rows={4}
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Enter each feature on a new line. These will appear as bullet points.
+                    </p>
+                  </div>
+                </>
+              )}
 
               <div className="flex items-center gap-2">
                 <Switch
