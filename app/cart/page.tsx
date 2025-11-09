@@ -12,10 +12,15 @@ import BlockLoader from '@/components/ui/block-loader';
 
 interface CartItem {
   id: string;
-  quantity: number;
+  total_tickets: number;
   subtotal: number;
-  date: string;
-  time: string;
+  booking_date: string;
+  adult_tickets: number;
+  child_tickets: number;
+  student_tickets: number;
+  senior_tickets: number;
+  exhibition_name?: string;
+  show_name?: string;
   exhibitions?: { name: string; slug: string };
   shows?: { name: string; slug: string };
   time_slots?: { start_time: string; end_time: string; slot_date: string };
@@ -155,11 +160,19 @@ export default function CartPage() {
             ) : (
               <div className="space-y-4">
                 {pendingItems.map((item) => {
-                  const eventName = item.exhibitions?.name || item.shows?.name || 'Event';
-                  const date = item.time_slots?.slot_date || item.date;
+                  const eventName = item.exhibitions?.name || item.shows?.name || item.exhibition_name || item.show_name || 'Event';
+                  const date = item.time_slots?.slot_date || item.booking_date;
                   const time = item.time_slots
                     ? `${item.time_slots.start_time} - ${item.time_slots.end_time}`
-                    : item.time;
+                    : 'Time TBD';
+                  
+                  // Build ticket summary
+                  const tickets = [];
+                  if (item.adult_tickets > 0) tickets.push(`${item.adult_tickets} Adult`);
+                  if (item.child_tickets > 0) tickets.push(`${item.child_tickets} Child`);
+                  if (item.student_tickets > 0) tickets.push(`${item.student_tickets} Student`);
+                  if (item.senior_tickets > 0) tickets.push(`${item.senior_tickets} Senior`);
+                  const ticketSummary = tickets.join(', ') || `${item.total_tickets} tickets`;
 
                   return (
                     <div
@@ -171,6 +184,9 @@ export default function CartPage() {
                         <p className="text-sm text-muted-foreground">
                           {new Date(date).toLocaleDateString()} • {time}
                         </p>
+                        <p className="text-sm text-muted-foreground mt-1">
+                          {ticketSummary}
+                        </p>
                         <p className="text-sm font-medium mt-1">
                           ₹{Number(item.subtotal).toFixed(2)}
                         </p>
@@ -179,7 +195,7 @@ export default function CartPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => router.push('/checkout')}
+                          onClick={() => router.push('/cart/checkout')}
                         >
                           Checkout
                         </Button>

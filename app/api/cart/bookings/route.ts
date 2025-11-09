@@ -41,14 +41,18 @@ export async function GET(request: NextRequest) {
       .from('cart_items')
       .select(`
         id,
-        quantity,
+        total_tickets,
         subtotal,
-        date,
-        time,
+        booking_date,
+        adult_tickets,
+        child_tickets,
+        student_tickets,
+        senior_tickets,
         exhibition_id,
         show_id,
         time_slot_id,
-        pricing_tier_id,
+        exhibition_name,
+        show_name,
         created_at,
         exhibitions:exhibition_id (
           id,
@@ -75,6 +79,7 @@ export async function GET(request: NextRequest) {
 
     if (pendingError) {
       console.error('Failed to fetch pending bookings:', pendingError);
+      console.error('Pending error details:', JSON.stringify(pendingError, null, 2));
     }
 
     // Fetch confirmed bookings
