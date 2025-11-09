@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
-import { getServiceSupabase } from '@/lib/supabase/client';
+import { verifyAdminAuth } from '@/lib/auth/admin-auth';
 
 /**
  * GET /api/admin/pricing
@@ -8,17 +8,18 @@ import { getServiceSupabase } from '@/lib/supabase/client';
  */
 export async function GET(request: NextRequest) {
   try {
+    const { error: authError, supabase } = await verifyAdminAuth();
+    if (authError) return authError;
+
     const searchParams = request.nextUrl.searchParams;
     const exhibitionId = searchParams.get('exhibitionId');
     const showId = searchParams.get('showId');
     const ticketType = searchParams.get('ticketType');
     const isActive = searchParams.get('isActive');
 
-    const supabase = getServiceSupabase();
-
-    // Build query
+    // Build query - use pricing table instead of pricing_tiers
     let query = supabase
-      .from('pricing_tiers')
+      .from('pricing')
       .select(`
         *,
         exhibition:exhibitions(id, name, slug),
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
     if (error) {
       console.error('Error fetching pricing tiers:', error);
       return NextResponse.json(
-        { error: 'Failed to fetch pricing tiers' },
+        { error: 'Failed to fetch pricing tiers', details: error.message },
         { status: 500 }
       );
     }
@@ -54,10 +55,10 @@ export async function GET(request: NextRequest) {
       success: true,
       pricingTiers,
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Pricing API error:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: error.message },
       { status: 500 }
     );
   }
@@ -69,6 +70,9 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
+    const { error: authError, supabase } = await verifyAdminAuth();
+    if (authError) return authError;
+
     const body = await request.json();
     const {
       exhibitionId,
@@ -118,11 +122,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = getServiceSupabase();
-
     // Check for overlapping pricing tiers
     let overlapQuery = supabase
-      .from('pricing_tiers')
+      .from('pricing')
       .select('id')
       .eq('ticket_type', ticketType)
       .eq('is_active', true);
@@ -151,7 +153,7 @@ export async function POST(request: NextRequest) {
 
     // Insert new pricing tier
     const { data, error } = await supabase
-      .from('pricing_tiers')
+      .from('pricing')
       .insert({
         exhibition_id: exhibitionId || null,
         show_id: showId || null,
@@ -193,6 +195,9 @@ export async function POST(request: NextRequest) {
  */
 export async function PUT(request: NextRequest) {
   try {
+    const { error: authError, supabase } = await verifyAdminAuth();
+    if (authError) return authError;
+
     const body = await request.json();
     const {
       id,
@@ -210,8 +215,6 @@ export async function PUT(request: NextRequest) {
         { status: 400 }
       );
     }
-
-    const supabase = getServiceSupabase();
 
     // Build update object
     const updates: any = {};
@@ -247,7 +250,7 @@ export async function PUT(request: NextRequest) {
     }
 
     const { data, error } = await supabase
-      .from('pricing_tiers')
+      .from('pricing')
       .update(updates)
       .eq('id', id)
       .select()
@@ -281,6 +284,9 @@ export async function PUT(request: NextRequest) {
  */
 export async function DELETE(request: NextRequest) {
   try {
+    const { error: authError, supabase } = await verifyAdminAuth();
+    if (authError) return authError;
+
     const searchParams = request.nextUrl.searchParams;
     const id = searchParams.get('id');
 
@@ -291,10 +297,8 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const supabase = getServiceSupabase();
-
     const { error } = await supabase
-      .from('pricing_tiers')
+      .from('pricing')
       .delete()
       .eq('id', id);
 

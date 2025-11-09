@@ -4,7 +4,7 @@
 // POST /api/admin/time-slots - Create time slot(s)
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { verifyAdminAuth } from '@/lib/auth/admin-auth';
 import { z } from 'zod';
 
 // Validation schemas
@@ -34,37 +34,10 @@ const bulkCreateSchema = z.object({
   skip_holidays: z.array(z.string()).optional(),
 });
 
-async function checkAdminAuth(supabase: any) {
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  
-  if (authError || !user) {
-    return { authorized: false, error: 'Unauthorized' };
-  }
-  
-  const { data: userData } = await supabase
-    .from('users')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-  
-  if (!userData || !['admin', 'super_admin'].includes(userData.role)) {
-    return { authorized: false, error: 'Forbidden' };
-  }
-  
-  return { authorized: true, user };
-}
-
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const auth = await checkAdminAuth(supabase);
-    
-    if (!auth.authorized) {
-      return NextResponse.json(
-        { success: false, error: auth.error },
-        { status: auth.error === 'Unauthorized' ? 401 : 403 }
-      );
-    }
+    const { error: authError, supabase } = await verifyAdminAuth();
+    if (authError) return authError;
     
     const searchParams = request.nextUrl.searchParams;
     const dateFrom = searchParams.get('date_from');
@@ -101,7 +74,11 @@ export async function GET(request: NextRequest) {
     const { data: slots, error } = await query;
     
     if (error) {
-      throw new Error('Failed to fetch time slots');
+      console.error('Error fetching time slots:', error);
+      return NextResponse.json(
+        { success: false, error: 'Failed to fetch time slots', details: error.message },
+        { status: 500 }
+      );
     }
     
     return NextResponse.json({
@@ -116,6 +93,7 @@ export async function GET(request: NextRequest) {
       {
         success: false,
         error: error.message || 'Failed to fetch time slots',
+        details: error.message,
       },
       { status: 500 }
     );
@@ -124,15 +102,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
-    const auth = await checkAdminAuth(supabase);
-    
-    if (!auth.authorized) {
-      return NextResponse.json(
-        { success: false, error: auth.error },
-        { status: auth.error === 'Unauthorized' ? 401 : 403 }
-      );
-    }
+    const { error: authError, supabase } = await verifyAdminAuth();
+    if (authError) return authError;
     
     const body = await request.json();
     
