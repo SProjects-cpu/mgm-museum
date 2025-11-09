@@ -70,6 +70,9 @@ export default function CheckoutPage() {
           // Check for pending booking from book-visit flow
           const pendingBooking = sessionStorage.getItem('pendingBooking');
           if (pendingBooking) {
+            // IMMEDIATELY remove from sessionStorage to prevent infinite loop
+            sessionStorage.removeItem('pendingBooking');
+            
             try {
               const data = JSON.parse(pendingBooking);
               console.log('Processing pending booking:', data);
@@ -134,7 +137,6 @@ export default function CheckoutPage() {
 
               if (!isMounted) return;
               
-              sessionStorage.removeItem('pendingBooking');
               console.log('Booking successfully added to cart');
               toast.success('Booking added to cart!', { id: 'add-booking' });
             } catch (error: any) {
@@ -143,11 +145,17 @@ export default function CheckoutPage() {
               
               if (!isMounted) return;
               
-              sessionStorage.removeItem('pendingBooking');
               toast.error(error.message || 'Failed to add booking. Please try again.', { id: 'add-booking' });
               
               setTimeout(() => {
-                if (isMounted) router.push('/book-visit?exhibitionId=' + (JSON.parse(pendingBooking).exhibitionId || ''));
+                if (isMounted) {
+                  try {
+                    const bookingData = JSON.parse(pendingBooking);
+                    router.push('/book-visit?exhibitionId=' + (bookingData.exhibitionId || ''));
+                  } catch {
+                    router.push('/cart');
+                  }
+                }
               }, 2000);
             }
           } else if (items.length === 0) {
