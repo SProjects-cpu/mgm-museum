@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase/client";
 import {
   BellIcon,
   CreditCardIcon,
@@ -30,7 +31,6 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { clearAdminSession } from "@/lib/auth/admin-auth";
 
 export function NavUser({
   user,
@@ -44,8 +44,8 @@ export function NavUser({
   const { isMobile } = useSidebar()
   const router = useRouter()
 
-  const handleLogout = () => {
-    clearAdminSession();
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     toast.success("Logged out successfully");
     router.push('/admin/login');
   };

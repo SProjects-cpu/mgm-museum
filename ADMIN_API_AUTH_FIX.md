@@ -82,3 +82,12 @@ Commit: `2c9a23913` - "Fix admin API authentication - add proper session and rol
 - `app/api/admin/exhibitions/route.ts`
 - `app/api/admin/shows/route.ts`
 - `app/api/admin/events/route.ts`
+- `app/api/admin/bookings/route.ts`
+- `app/api/admin/feedbacks/route.ts`
+
+## Additional Fix - Bookings & Feedbacks
+The bookings and feedbacks APIs were checking the `users` table for roles, but roles are stored in the `profiles` table. Updated both to use the `verifyAdminAuth()` helper for consistent authentication.
+
+Commits:
+- `2c9a23913` - "Fix admin API authentication - add proper session and role verification"
+- `2d04a7e87` - "Fix bookings and feedbacks API authentication - use profiles table instead of users"
