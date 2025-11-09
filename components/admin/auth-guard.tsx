@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { isAdminAuthenticated, refreshAdminSession } from "@/lib/auth/admin-auth";
+import { supabase } from "@/lib/supabase/config";
 import { Loader } from "@/components/ui/loader";
 
 interface AuthGuardProps {
@@ -23,33 +23,65 @@ export function AuthGuard({ children }: AuthGuardProps) {
       return;
     }
 
-    // Check authentication
-    const checkAuth = () => {
-      const authenticated = isAdminAuthenticated();
-      
-      if (authenticated) {
-        // Refresh session to extend expiration
-        refreshAdminSession();
+    // Check authentication with Supabase
+    const checkAuth = async () => {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error || !session) {
+          router.replace('/admin/login');
+          return;
+        }
+
+        // Verify admin role
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', session.user.id)
+          .single();
+
+        if (userError || !userData || !['admin', 'super_admin'].includes(userData.role)) {
+          // Not an admin, sign out and redirect
+          await supabase.auth.signOut();
+          router.replace('/admin/login');
+          return;
+        }
+
         setIsAuthenticated(true);
         setIsChecking(false);
-      } else {
-        // Redirect to login
+      } catch (err) {
+        console.error('Auth check error:', err);
         router.replace('/admin/login');
       }
     };
 
     checkAuth();
 
-    // Recheck authentication every 5 minutes
-    const interval = setInterval(() => {
-      if (!isAdminAuthenticated()) {
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT' || !session) {
         router.replace('/admin/login');
-      } else {
-        refreshAdminSession();
-      }
-    }, 5 * 60 * 1000);
+      } else if (event === 'SIGNED_IN' && session) {
+        // Verify admin role on sign in
+        const { data: userData } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', session.user.id)
+          .single();
 
-    return () => clearInterval(interval);
+        if (userData && ['admin', 'super_admin'].includes(userData.role)) {
+          setIsAuthenticated(true);
+          setIsChecking(false);
+        } else {
+          await supabase.auth.signOut();
+          router.replace('/admin/login');
+        }
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [pathname, router]);
 
   // Show loading state while checking
