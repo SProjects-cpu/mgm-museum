@@ -13,14 +13,14 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { validateAdminCredentials, createAdminSession, DEFAULT_ADMIN } from '@/lib/auth/admin-auth';
+import { supabase } from '@/lib/supabase/config';
 import { toast } from 'sonner';
 import { Loader } from "@/components/ui/loader";
 
 export default function LoginCard() {
   const router = useRouter();
-  const [email, setEmail] = useState(DEFAULT_ADMIN.email);
-  const [password, setPassword] = useState(DEFAULT_ADMIN.password);
+  const [email, setEmail] = useState('admin@mgmmuseum.com');
+  const [password, setPassword] = useState('admin123');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -29,14 +29,38 @@ export default function LoginCard() {
     setError('');
     setLoading(true);
 
-    // Simulate network delay for better UX
-    await new Promise(resolve => setTimeout(resolve, 500));
+    try {
+      // Sign in with Supabase
+      const { data, error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    // Validate credentials
-    if (validateAdminCredentials(email, password)) {
-      // Create session
-      createAdminSession(email);
-      
+      if (signInError) {
+        throw signInError;
+      }
+
+      if (!data.user) {
+        throw new Error('No user returned from sign in');
+      }
+
+      // Verify user has admin role
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', data.user.id)
+        .single();
+
+      if (userError || !userData) {
+        throw new Error('Failed to verify admin role');
+      }
+
+      if (!['admin', 'super_admin'].includes(userData.role)) {
+        // Sign out if not admin
+        await supabase.auth.signOut();
+        throw new Error('Access denied. Admin role required.');
+      }
+
       // Show success message
       toast.success('Login successful!', {
         description: 'Redirecting to admin dashboard...',
@@ -46,12 +70,14 @@ export default function LoginCard() {
       // Redirect to admin dashboard
       setTimeout(() => {
         router.push('/admin');
+        router.refresh(); // Refresh to update session
       }, 500);
-    } else {
-      setError('Invalid email or password. Please try again.');
+    } catch (err: any) {
+      console.error('Login error:', err);
+      setError(err.message || 'Invalid email or password. Please try again.');
       setLoading(false);
       toast.error('Login failed', {
-        description: 'Invalid credentials',
+        description: err.message || 'Invalid credentials',
       });
     }
   };
@@ -77,9 +103,9 @@ export default function LoginCard() {
             {/* Default Credentials Info */}
             <div className="bg-blue-900/20 border border-blue-500/50 rounded-md p-3">
               <p className="text-blue-400 text-sm">
-                <strong>Default Credentials:</strong><br />
-                Email: {DEFAULT_ADMIN.email}<br />
-                Password: {DEFAULT_ADMIN.password}
+                <strong>Admin Credentials:</strong><br />
+                Email: admin@mgmmuseum.com<br />
+                Password: admin123
               </p>
             </div>
 

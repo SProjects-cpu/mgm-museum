@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { isAdminAuthenticated } from "@/lib/auth/admin-auth";
+import { supabase } from "@/lib/supabase/config";
 import { Loader } from "@/components/ui/loader";
 import LoginCard from "@/components/ui/login-card-1";
 
@@ -12,11 +12,27 @@ export default function AdminLoginPage() {
 
   // Check if already authenticated
   useEffect(() => {
-    if (isAdminAuthenticated()) {
-      router.replace('/admin');
-    } else {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session) {
+        // Check if user has admin role
+        const { data: userData } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', session.user.id)
+          .single();
+
+        if (userData && ['admin', 'super_admin'].includes(userData.role)) {
+          router.replace('/admin');
+          return;
+        }
+      }
+      
       setChecking(false);
-    }
+    };
+
+    checkAuth();
   }, [router]);
 
   if (checking) {
