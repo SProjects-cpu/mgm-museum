@@ -64,13 +64,13 @@ export default function LoginCard() {
       // Show success message
       toast.success('Login successful!', {
         description: 'Redirecting to admin dashboard...',
-        duration: 2000,
+        duration: 1500,
       });
 
-      // Use window.location to ensure cookies are sent with the request
+      // Wait a bit longer to ensure cookies are set, then redirect
       setTimeout(() => {
         window.location.href = '/admin';
-      }, 500);
+      }, 1000);
     } catch (err: any) {
       console.error('Login error:', err);
       setError(err.message || 'Invalid email or password. Please try again.');
