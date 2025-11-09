@@ -133,37 +133,45 @@ const COLORS = [
 export function AnalyticsDashboard() {
   const [exporting, setExporting] = useState(false);
 
-  const handleExport = async (type: string = 'bookings') => {
+  const handleExport = async () => {
     try {
       setExporting(true);
-      toast.info('Generating report...');
+      toast.info('Generating PDF report...');
 
-      const endDate = new Date().toISOString();
-      const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+      const endDate = new Date();
+      const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
-      const response = await fetch(
-        `/api/admin/reports/export?type=${type}&format=csv&startDate=${startDate}&endDate=${endDate}`
-      );
+      const response = await fetch('/api/admin/export/analytics', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          startDate: startDate.toISOString(),
+          endDate: endDate.toISOString(),
+        }),
+      });
 
       if (!response.ok) {
-        throw new Error('Failed to export report');
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to export report');
       }
 
-      // Download the file
+      // Download the PDF file
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${type}-report-${new Date().toISOString().split('T')[0]}.csv`;
+      a.download = `MGM_Analytics_Report_${new Date().toISOString().split('T')[0]}.pdf`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       window.URL.revokeObjectURL(url);
 
-      toast.success('Report exported successfully');
+      toast.success('PDF report exported successfully');
     } catch (error) {
       console.error('Export error:', error);
-      toast.error('Failed to export report');
+      toast.error(error instanceof Error ? error.message : 'Failed to export report');
     } finally {
       setExporting(false);
     }
@@ -184,9 +192,9 @@ export function AnalyticsDashboard() {
             <Calendar className="w-4 h-4 mr-2" />
             Last 30 Days
           </Button>
-          <Button onClick={() => handleExport('bookings')} disabled={exporting}>
+          <Button onClick={handleExport} disabled={exporting}>
             <Download className="w-4 h-4 mr-2" />
-            {exporting ? 'Exporting...' : 'Export Report'}
+            {exporting ? 'Generating PDF...' : 'Export PDF'}
           </Button>
         </div>
       </div>
