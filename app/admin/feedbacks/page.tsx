@@ -49,7 +49,19 @@ export default function AdminFeedbacksPage() {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    fetchFeedbacks();
+    // Check if user is logged in before fetching
+    const checkAuthAndFetch = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.error('No active session detected');
+        toast.error('Please log in to access admin panel');
+        setLoading(false);
+        return;
+      }
+      fetchFeedbacks();
+    };
+    
+    checkAuthAndFetch();
   }, [pagination.page, ratingFilter, eventTypeFilter]);
 
   const fetchFeedbacks = async () => {
@@ -57,7 +69,8 @@ export default function AdminFeedbacksPage() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
-        toast.error('Please log in');
+        console.error('No session found - user needs to log in');
+        toast.error('Session expired. Please log in again');
         return;
       }
 
