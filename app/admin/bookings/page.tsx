@@ -74,13 +74,20 @@ export default function BookingsPage() {
         sortOrder,
       });
 
+      // Only add dateRange if it's not 'all' and not 'custom' without dates
       if (dateRange !== 'all') {
-        params.append('dateRange', dateRange);
-      }
-
-      if (dateRange === 'custom' && customStartDate && customEndDate) {
-        params.append('startDate', format(customStartDate, 'yyyy-MM-dd'));
-        params.append('endDate', format(customEndDate, 'yyyy-MM-dd'));
+        if (dateRange === 'custom') {
+          // Only add custom range if both dates are set
+          if (customStartDate && customEndDate) {
+            params.append('dateRange', 'custom');
+            params.append('startDate', format(customStartDate, 'yyyy-MM-dd'));
+            params.append('endDate', format(customEndDate, 'yyyy-MM-dd'));
+          }
+          // Otherwise, don't add any date filter (defaults to 'all')
+        } else {
+          // For non-custom ranges (today, tomorrow, last_week, etc.)
+          params.append('dateRange', dateRange);
+        }
       }
 
       if (status !== 'all') {
