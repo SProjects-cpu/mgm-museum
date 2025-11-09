@@ -37,15 +37,26 @@ export async function GET(request: NextRequest) {
     }
 
     // Verify user is admin
-    const { data: userData } = await supabase
+    const { data: userData, error: userError } = await supabase
       .from('users')
       .select('role')
       .eq('id', user.id)
       .single();
 
-    if (!userData || (userData.role !== 'admin' && userData.role !== 'super_admin')) {
+    console.log('User data:', { userId: user.id, userData, userError });
+
+    if (userError) {
+      console.error('Error fetching user role:', userError);
       return NextResponse.json(
-        { success: false, message: 'Admin access required' },
+        { success: false, message: `Failed to verify admin status: ${userError.message}` },
+        { status: 500 }
+      );
+    }
+
+    if (!userData || (userData.role !== 'admin' && userData.role !== 'super_admin')) {
+      console.log('Access denied - user role:', userData?.role);
+      return NextResponse.json(
+        { success: false, message: `Admin access required. Current role: ${userData?.role || 'none'}` },
         { status: 403 }
       );
     }
