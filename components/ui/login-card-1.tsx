@@ -13,64 +13,30 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { supabase } from '@/lib/supabase/config';
 import { toast } from 'sonner';
 import { Loader } from "@/components/ui/loader";
+import { login } from '@/app/admin/login/actions';
 
 export default function LoginCard() {
   const router = useRouter();
-  const [email, setEmail] = useState('admin@mgmmuseum.com');
-  const [password, setPassword] = useState('admin123');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError('');
     setLoading(true);
 
     try {
-      // Sign in with Supabase
-      const { data, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const formData = new FormData(e.currentTarget);
+      const result = await login(formData);
 
-      if (signInError) {
-        throw signInError;
+      if (result?.error) {
+        throw new Error(result.error);
       }
 
-      if (!data.user) {
-        throw new Error('No user returned from sign in');
-      }
-
-      // Verify user has admin role
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', data.user.id)
-        .single();
-
-      if (userError || !userData) {
-        throw new Error('Failed to verify admin role');
-      }
-
-      if (!['admin', 'super_admin'].includes(userData.role)) {
-        // Sign out if not admin
-        await supabase.auth.signOut();
-        throw new Error('Access denied. Admin role required.');
-      }
-
-      // Show success message
-      toast.success('Login successful!', {
-        description: 'Redirecting to admin dashboard...',
-        duration: 1500,
-      });
-
-      // Wait a bit longer to ensure cookies are set, then redirect
-      setTimeout(() => {
-        window.location.href = '/admin';
-      }, 1000);
+      // If we get here, redirect was successful
+      toast.success('Login successful!');
     } catch (err: any) {
       console.error('Login error:', err);
       setError(err.message || 'Invalid email or password. Please try again.');
@@ -111,11 +77,11 @@ export default function LoginCard() {
             <div className="flex flex-col space-y-1.5">
               <Label htmlFor="email">Email</Label>
               <Input 
-                id="email" 
+                id="email"
+                name="email"
                 placeholder="Enter your email" 
                 type="email" 
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                defaultValue="admin@mgmmuseum.com"
                 required
                 disabled={loading}
               />
@@ -124,10 +90,10 @@ export default function LoginCard() {
               <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
+                name="password"
                 placeholder="Enter your password"
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                defaultValue="admin123"
                 required
                 disabled={loading}
               />
