@@ -56,6 +56,16 @@ export async function GET(request: NextRequest) {
         endDate = new Date('2030-12-31'); // Far future date
     }
 
+    // Log the date range being used
+    console.log('[Bookings API] Date range:', {
+      dateRange,
+      startDate: startDate.toISOString(),
+      endDate: endDate.toISOString(),
+      status,
+      sortBy,
+      sortOrder
+    });
+
     // Build the query
     let query = supabase
       .from('bookings')
@@ -117,6 +127,11 @@ export async function GET(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    console.log('[Bookings API] Found bookings:', {
+      count,
+      returned: bookingsData?.length || 0
+    });
 
     // Get booking tickets count for each booking
     const bookingIds = bookingsData?.map((b: any) => b.id) || [];
