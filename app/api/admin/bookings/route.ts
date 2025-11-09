@@ -80,6 +80,7 @@ export async function GET(request: NextRequest) {
         time_slot_id,
         total_amount,
         status,
+        payment_id,
         payment_details,
         created_at,
         users:user_id (
@@ -133,31 +134,19 @@ export async function GET(request: NextRequest) {
       returned: bookingsData?.length || 0
     });
 
-    // Get booking tickets count for each booking
-    const bookingIds = bookingsData?.map((b: any) => b.id) || [];
-    const { data: ticketCounts } = await supabase
-      .from('booking_tickets')
-      .select('booking_id, quantity')
-      .in('booking_id', bookingIds) as any;
-
-    // Create a map of booking_id to total tickets
-    const ticketCountMap = new Map<string, number>();
-    ticketCounts?.forEach((tc: any) => {
-      const current = ticketCountMap.get(tc.booking_id) || 0;
-      ticketCountMap.set(tc.booking_id, current + tc.quantity);
-    });
-
     // Transform data to match the expected format
     const bookings = bookingsData?.map(booking => {
       const visitorName = booking.guest_name || booking.users?.full_name || 'N/A';
       const visitorEmail = booking.guest_email || booking.users?.email || 'N/A';
       const visitorPhone = booking.guest_phone || booking.users?.phone || 'N/A';
       const ticketNumber = booking.tickets?.[0]?.ticket_number || 'N/A';
-      const razorpayId = booking.payment_details?.razorpay_payment_id || 'N/A';
+      // Get Razorpay ID from payment_id field (not payment_details)
+      const razorpayId = booking.payment_id || booking.payment_details?.razorpay_payment_id || 'N/A';
       const visitTimeSlot = booking.time_slots 
         ? `${booking.time_slots.start_time} - ${booking.time_slots.end_time}`
         : 'N/A';
-      const numberOfTickets = ticketCountMap.get(booking.id) || 0;
+      // Count tickets from the tickets array (not booking_tickets table)
+      const numberOfTickets = booking.tickets?.length || 0;
 
       return {
         id: booking.id,
