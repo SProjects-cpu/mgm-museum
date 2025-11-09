@@ -109,7 +109,7 @@ export function Navbar() {
                   href={item.href}
                   className={cn(
                     "px-4 py-2 rounded-md text-sm font-medium transition-colors",
-                    "hover:bg-accent hover:text-accent-foreground",
+                    "hover:bg-black hover:text-white",
                     "relative after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2",
                     "after:w-0 after:h-0.5 after:bg-primary after:transition-all",
                     "hover:after:w-3/4"
@@ -173,7 +173,7 @@ export function Navbar() {
 
             {/* Mobile Menu Button */}
             <button
-              className="lg:hidden p-2 rounded-md hover:bg-accent transition-colors"
+              className="lg:hidden p-2 rounded-md hover:bg-black hover:text-white transition-colors"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               aria-label="Toggle menu"
             >
@@ -193,7 +193,7 @@ export function Navbar() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="px-4 py-3 rounded-md text-sm font-medium hover:bg-accent transition-colors"
+                    className="px-4 py-3 rounded-md text-sm font-medium hover:bg-black hover:text-white transition-colors"
                     onClick={() => setIsMobileMenuOpen(false)}
                   >
                     {item.label}

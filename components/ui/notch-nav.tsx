@@ -123,7 +123,7 @@ export function NotchNav({
                   className={[
                     "relative rounded-md px-3 py-2 text-sm font-medium outline-none transition-colors",
                     "focus-visible:ring-2 focus-visible:ring-ring",
-                    isActive ? "text-primary" : "text-white/70 hover:text-primary",
+                    isActive ? "text-primary" : "text-foreground hover:bg-black hover:text-white",
                   ].join(" ")}
                 >
                   <span className="text-pretty">{item.label}</span>
