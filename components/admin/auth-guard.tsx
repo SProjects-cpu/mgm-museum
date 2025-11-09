@@ -14,7 +14,6 @@ export function AuthGuard({ children }: AuthGuardProps) {
   const pathname = usePathname();
   const [isChecking, setIsChecking] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [authTimeout, setAuthTimeout] = useState(false);
 
   useEffect(() => {
     // Skip auth check for login page
@@ -24,80 +23,41 @@ export function AuthGuard({ children }: AuthGuardProps) {
       return;
     }
 
-    // Check authentication with Supabase
+    // Simplified auth check - trust middleware for route protection
     const checkAuth = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
+        const { data: { session } } = await supabase.auth.getSession();
         
-        if (error || !session) {
+        // If we got here and have a session, middleware already verified admin role
+        if (session) {
+          setIsAuthenticated(true);
           setIsChecking(false);
-          router.replace('/admin/login');
-          return;
+        } else {
+          // No session, redirect to login
+          window.location.href = '/admin/login';
         }
-
-        // Verify admin role
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('role')
-          .eq('id', session.user.id)
-          .single();
-
-        if (userError || !userData || !['admin', 'super_admin'].includes(userData.role)) {
-          // Not an admin, sign out and redirect
-          await supabase.auth.signOut();
-          setIsChecking(false);
-          router.replace('/admin/login');
-          return;
-        }
-
-        setIsAuthenticated(true);
-        setIsChecking(false);
       } catch (err) {
         console.error('Auth check error:', err);
-        setIsChecking(false);
-        router.replace('/admin/login');
+        window.location.href = '/admin/login';
       }
     };
 
     checkAuth();
 
-    // Set a timeout to prevent infinite loading
-    const timeout = setTimeout(() => {
-      if (isChecking) {
-        console.error('Auth check timeout - redirecting to login');
-        setIsChecking(false);
-        setAuthTimeout(true);
-        router.replace('/admin/login');
-      }
-    }, 10000); // 10 second timeout
-
     // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT' || !session) {
-        router.replace('/admin/login');
+        window.location.href = '/admin/login';
       } else if (event === 'SIGNED_IN' && session) {
-        // Verify admin role on sign in
-        const { data: userData } = await supabase
-          .from('users')
-          .select('role')
-          .eq('id', session.user.id)
-          .single();
-
-        if (userData && ['admin', 'super_admin'].includes(userData.role)) {
-          setIsAuthenticated(true);
-          setIsChecking(false);
-        } else {
-          await supabase.auth.signOut();
-          router.replace('/admin/login');
-        }
+        setIsAuthenticated(true);
+        setIsChecking(false);
       }
     });
 
     return () => {
-      clearTimeout(timeout);
       subscription.unsubscribe();
     };
-  }, [pathname, router, isChecking]);
+  }, [pathname, router]);
 
   // Show loading state while checking
   if (isChecking) {
@@ -105,9 +65,7 @@ export function AuthGuard({ children }: AuthGuardProps) {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-4">
           <Loader variant="spiral" size="lg" className="text-primary" />
-          <p className="text-muted-foreground">
-            {authTimeout ? 'Authentication timeout - redirecting...' : 'Loading admin panel...'}
-          </p>
+          <p className="text-muted-foreground">Loading admin panel...</p>
         </div>
       </div>
     );

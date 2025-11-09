@@ -67,10 +67,9 @@ export default function LoginCard() {
         duration: 2000,
       });
 
-      // Redirect to admin dashboard
+      // Use window.location to ensure cookies are sent with the request
       setTimeout(() => {
-        router.push('/admin');
-        router.refresh(); // Refresh to update session
+        window.location.href = '/admin';
       }, 500);
     } catch (err: any) {
       console.error('Login error:', err);
