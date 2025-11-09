@@ -136,7 +136,7 @@ export function AnimatedNavFramer() {
             >
               <Link
                 href={item.href}
-                className="text-xs sm:text-sm font-medium text-muted-foreground hover:text-foreground transition-colors px-1 sm:px-2 py-1 rounded-md hover:bg-accent/50 whitespace-nowrap"
+                className="text-xs sm:text-sm font-medium text-muted-foreground hover:text-white transition-colors px-1 sm:px-2 py-1 rounded-md hover:bg-black whitespace-nowrap"
               >
                 <span className="hidden sm:inline">{item.label}</span>
                 <span className="sm:hidden">{item.label.split(' ')[0]}</span>
