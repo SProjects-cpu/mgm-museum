@@ -48,15 +48,15 @@ export default function LoginCard() {
   };
 
   return (
-    <Card className="w-[310px]">
-      <CardHeader>
-        <CardTitle>Login</CardTitle>
-        <CardDescription>
-          Enter your credentials to access your account.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit}>
+      <Card className="w-[310px]">
+        <CardHeader>
+          <CardTitle>Login</CardTitle>
+          <CardDescription>
+            Enter your credentials to access your account.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
           <div className="grid w-full items-center gap-4">
             {/* Error Alert */}
             {error && (
@@ -99,30 +99,31 @@ export default function LoginCard() {
               />
             </div>
           </div>
-        </form>
-      </CardContent>
-      <CardFooter className="flex justify-between">
-        <Button 
-          variant="outline" 
-          onClick={() => router.push('/')}
-          disabled={loading}
-        >
-          Cancel
-        </Button>
-        <Button 
-          onClick={handleSubmit}
-          disabled={loading}
-        >
-          {loading ? (
-            <>
-              <Loader variant="classic" size="sm" className="mr-2" />
-              Logging in...
-            </>
-          ) : (
-            'Login'
-          )}
-        </Button>
-      </CardFooter>
-    </Card>
+        </CardContent>
+        <CardFooter className="flex justify-between">
+          <Button 
+            type="button"
+            variant="outline" 
+            onClick={() => router.push('/')}
+            disabled={loading}
+          >
+            Cancel
+          </Button>
+          <Button 
+            type="submit"
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <Loader variant="classic" size="sm" className="mr-2" />
+                Logging in...
+              </>
+            ) : (
+              'Login'
+            )}
+          </Button>
+        </CardFooter>
+      </Card>
+    </form>
   );
 }
