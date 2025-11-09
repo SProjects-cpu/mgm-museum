@@ -72,12 +72,18 @@ export default function CheckoutPage() {
           if (pendingBooking) {
             try {
               const data = JSON.parse(pendingBooking);
+              console.log('Processing pending booking:', data);
               toast.loading('Adding booking to cart...', { id: 'add-booking' });
               
               // Wait a bit for session to be fully established
               await new Promise(resolve => setTimeout(resolve, 1000));
               
               if (!isMounted) return;
+              
+              // Validate required data
+              if (!data.exhibitionId || !data.selectedTimeSlot || !data.selectedTickets || !data.selectedDate) {
+                throw new Error('Invalid booking data. Please try booking again.');
+              }
               
               const tickets = {
                 adult: data.selectedTickets.find((t: any) => t.ticketType.toLowerCase() === 'adult')?.quantity || 0,
@@ -87,6 +93,10 @@ export default function CheckoutPage() {
               };
 
               const totalTickets = Object.values(tickets).reduce((sum: number, qty) => sum + (qty as number), 0);
+
+              if (totalTickets === 0) {
+                throw new Error('No tickets selected. Please try booking again.');
+              }
 
               const fullTimeSlot = {
                 id: data.selectedTimeSlot.id,
@@ -103,6 +113,13 @@ export default function CheckoutPage() {
                 itemName: data.exhibitionName,
               };
 
+              console.log('Adding to cart with data:', {
+                exhibitionId: data.exhibitionId,
+                timeSlotId: data.selectedTimeSlot.id,
+                tickets,
+                totalTickets,
+              });
+
               // Add to cart
               await useCartStore.getState().addItem({
                 exhibitionId: data.exhibitionId,
@@ -118,17 +135,19 @@ export default function CheckoutPage() {
               if (!isMounted) return;
               
               sessionStorage.removeItem('pendingBooking');
+              console.log('Booking successfully added to cart');
               toast.success('Booking added to cart!', { id: 'add-booking' });
             } catch (error: any) {
               console.error('Error adding pending booking:', error);
+              console.error('Error details:', error.message, error.stack);
               
               if (!isMounted) return;
               
               sessionStorage.removeItem('pendingBooking');
-              toast.error('Failed to add booking. Please try again.', { id: 'add-booking' });
+              toast.error(error.message || 'Failed to add booking. Please try again.', { id: 'add-booking' });
               
               setTimeout(() => {
-                if (isMounted) router.push('/cart');
+                if (isMounted) router.push('/book-visit?exhibitionId=' + (JSON.parse(pendingBooking).exhibitionId || ''));
               }, 2000);
             }
           } else if (items.length === 0) {
