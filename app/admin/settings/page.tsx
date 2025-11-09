@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,34 +16,124 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Loader } from "@/components/ui/loader";
-import { Save } from "lucide-react";
+import { Save, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
+
+interface Settings {
+  general: {
+    museum_name: string;
+    contact_email: string;
+    contact_phone: string;
+    address: string;
+  };
+  hours: {
+    opening_time: string;
+    closing_time: string;
+    closed_day: string;
+  };
+  booking: {
+    advance_booking_days: number;
+    cancellation_window_hours: number;
+    service_fee_percent: number;
+    enable_online_booking: boolean;
+    auto_confirm_bookings: boolean;
+    enable_notifications: boolean;
+  };
+  system: {
+    maintenance_mode: boolean;
+  };
+}
 
 export default function SettingsPage() {
   const [loading, setLoading] = useState(false);
-  const [settings, setSettings] = useState({
-    museumName: "MGM APJ Abdul Kalam Astrospace Science Centre",
-    contactEmail: "info@mgmapjscicentre.org",
-    contactPhone: "+91 (240) 123-4567",
-    address: "Near Datta Mandir, Paithan Road, Aurangabad, Maharashtra 431005",
-    openingTime: "09:30",
-    closingTime: "17:30",
-    closedDay: "monday",
-    advanceBooking: 90,
-    cancellationWindow: 24,
-    serviceFee: 2,
-    enableOnlineBooking: true,
-    enableNotifications: true,
-    maintenanceMode: false,
-    autoConfirmBookings: false,
+  const [fetching, setFetching] = useState(true);
+  const [settings, setSettings] = useState<Settings>({
+    general: {
+      museum_name: "",
+      contact_email: "",
+      contact_phone: "",
+      address: "",
+    },
+    hours: {
+      opening_time: "",
+      closing_time: "",
+      closed_day: "",
+    },
+    booking: {
+      advance_booking_days: 30,
+      cancellation_window_hours: 24,
+      service_fee_percent: 2.5,
+      enable_online_booking: true,
+      auto_confirm_bookings: true,
+      enable_notifications: true,
+    },
+    system: {
+      maintenance_mode: false,
+    },
   });
 
-  const handleSave = async () => {
-    setLoading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    toast.success("Settings saved successfully!");
-    setLoading(false);
+  // Fetch settings on mount
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    try {
+      setFetching(true);
+      const response = await fetch('/api/admin/settings');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch settings');
+      }
+
+      const data = await response.json();
+      setSettings(data);
+    } catch (error) {
+      console.error('Error fetching settings:', error);
+      toast.error('Failed to load settings');
+    } finally {
+      setFetching(false);
+    }
   };
+
+  const handleSave = async () => {
+    try {
+      setLoading(true);
+      
+      const response = await fetch('/api/admin/settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(settings),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to save settings');
+      }
+
+      toast.success('Settings saved successfully!');
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to save settings');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleReset = async () => {
+    await fetchSettings();
+    toast.info('Settings reset to saved values');
+  };
+
+  if (fetching) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader variant="classic" size="lg" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -63,9 +153,12 @@ export default function SettingsPage() {
             <Label htmlFor="museum-name">Museum Name</Label>
             <Input
               id="museum-name"
-              value={settings.museumName}
+              value={settings.general.museum_name}
               onChange={(e) =>
-                setSettings({ ...settings, museumName: e.target.value })
+                setSettings({
+                  ...settings,
+                  general: { ...settings.general, museum_name: e.target.value },
+                })
               }
             />
           </div>
@@ -74,9 +167,12 @@ export default function SettingsPage() {
             <Input
               id="contact-email"
               type="email"
-              value={settings.contactEmail}
+              value={settings.general.contact_email}
               onChange={(e) =>
-                setSettings({ ...settings, contactEmail: e.target.value })
+                setSettings({
+                  ...settings,
+                  general: { ...settings.general, contact_email: e.target.value },
+                })
               }
             />
           </div>
@@ -84,9 +180,12 @@ export default function SettingsPage() {
             <Label htmlFor="contact-phone">Contact Phone</Label>
             <Input
               id="contact-phone"
-              value={settings.contactPhone}
+              value={settings.general.contact_phone}
               onChange={(e) =>
-                setSettings({ ...settings, contactPhone: e.target.value })
+                setSettings({
+                  ...settings,
+                  general: { ...settings.general, contact_phone: e.target.value },
+                })
               }
             />
           </div>
@@ -94,9 +193,12 @@ export default function SettingsPage() {
             <Label htmlFor="address">Address</Label>
             <Textarea
               id="address"
-              value={settings.address}
+              value={settings.general.address}
               onChange={(e) =>
-                setSettings({ ...settings, address: e.target.value })
+                setSettings({
+                  ...settings,
+                  general: { ...settings.general, address: e.target.value },
+                })
               }
               rows={3}
             />
@@ -117,9 +219,12 @@ export default function SettingsPage() {
               <Input
                 id="opening-time"
                 type="time"
-                value={settings.openingTime}
+                value={settings.hours.opening_time}
                 onChange={(e) =>
-                  setSettings({ ...settings, openingTime: e.target.value })
+                  setSettings({
+                    ...settings,
+                    hours: { ...settings.hours, opening_time: e.target.value },
+                  })
                 }
               />
             </div>
@@ -128,9 +233,12 @@ export default function SettingsPage() {
               <Input
                 id="closing-time"
                 type="time"
-                value={settings.closingTime}
+                value={settings.hours.closing_time}
                 onChange={(e) =>
-                  setSettings({ ...settings, closingTime: e.target.value })
+                  setSettings({
+                    ...settings,
+                    hours: { ...settings.hours, closing_time: e.target.value },
+                  })
                 }
               />
             </div>
@@ -138,23 +246,26 @@ export default function SettingsPage() {
           <div className="space-y-2">
             <Label htmlFor="closed-day">Weekly Closed Day</Label>
             <Select
-              value={settings.closedDay}
+              value={settings.hours.closed_day}
               onValueChange={(value) =>
-                setSettings({ ...settings, closedDay: value })
+                setSettings({
+                  ...settings,
+                  hours: { ...settings.hours, closed_day: value },
+                })
               }
             >
               <SelectTrigger id="closed-day">
                 <SelectValue placeholder="Select day" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="monday">Monday</SelectItem>
-                <SelectItem value="tuesday">Tuesday</SelectItem>
-                <SelectItem value="wednesday">Wednesday</SelectItem>
-                <SelectItem value="thursday">Thursday</SelectItem>
-                <SelectItem value="friday">Friday</SelectItem>
-                <SelectItem value="saturday">Saturday</SelectItem>
-                <SelectItem value="sunday">Sunday</SelectItem>
-                <SelectItem value="none">No Closed Day</SelectItem>
+                <SelectItem value="Monday">Monday</SelectItem>
+                <SelectItem value="Tuesday">Tuesday</SelectItem>
+                <SelectItem value="Wednesday">Wednesday</SelectItem>
+                <SelectItem value="Thursday">Thursday</SelectItem>
+                <SelectItem value="Friday">Friday</SelectItem>
+                <SelectItem value="Saturday">Saturday</SelectItem>
+                <SelectItem value="Sunday">Sunday</SelectItem>
+                <SelectItem value="None">No Closed Day</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -174,11 +285,14 @@ export default function SettingsPage() {
               <Input
                 id="advance-booking"
                 type="number"
-                value={settings.advanceBooking}
+                value={settings.booking.advance_booking_days}
                 onChange={(e) =>
                   setSettings({
                     ...settings,
-                    advanceBooking: parseInt(e.target.value),
+                    booking: {
+                      ...settings.booking,
+                      advance_booking_days: parseInt(e.target.value),
+                    },
                   })
                 }
                 min="1"
@@ -189,11 +303,14 @@ export default function SettingsPage() {
               <Input
                 id="cancellation-window"
                 type="number"
-                value={settings.cancellationWindow}
+                value={settings.booking.cancellation_window_hours}
                 onChange={(e) =>
                   setSettings({
                     ...settings,
-                    cancellationWindow: parseInt(e.target.value),
+                    booking: {
+                      ...settings.booking,
+                      cancellation_window_hours: parseInt(e.target.value),
+                    },
                   })
                 }
                 min="0"
@@ -204,11 +321,15 @@ export default function SettingsPage() {
               <Input
                 id="service-fee"
                 type="number"
-                value={settings.serviceFee}
+                step="0.1"
+                value={settings.booking.service_fee_percent}
                 onChange={(e) =>
                   setSettings({
                     ...settings,
-                    serviceFee: parseInt(e.target.value),
+                    booking: {
+                      ...settings.booking,
+                      service_fee_percent: parseFloat(e.target.value),
+                    },
                   })
                 }
                 min="0"
@@ -229,9 +350,12 @@ export default function SettingsPage() {
               </div>
               <Switch
                 id="online-booking"
-                checked={settings.enableOnlineBooking}
+                checked={settings.booking.enable_online_booking}
                 onCheckedChange={(checked) =>
-                  setSettings({ ...settings, enableOnlineBooking: checked })
+                  setSettings({
+                    ...settings,
+                    booking: { ...settings.booking, enable_online_booking: checked },
+                  })
                 }
               />
             </div>
@@ -245,9 +369,12 @@ export default function SettingsPage() {
               </div>
               <Switch
                 id="auto-confirm"
-                checked={settings.autoConfirmBookings}
+                checked={settings.booking.auto_confirm_bookings}
                 onCheckedChange={(checked) =>
-                  setSettings({ ...settings, autoConfirmBookings: checked })
+                  setSettings({
+                    ...settings,
+                    booking: { ...settings.booking, auto_confirm_bookings: checked },
+                  })
                 }
               />
             </div>
@@ -261,9 +388,12 @@ export default function SettingsPage() {
               </div>
               <Switch
                 id="notifications"
-                checked={settings.enableNotifications}
+                checked={settings.booking.enable_notifications}
                 onCheckedChange={(checked) =>
-                  setSettings({ ...settings, enableNotifications: checked })
+                  setSettings({
+                    ...settings,
+                    booking: { ...settings.booking, enable_notifications: checked },
+                  })
                 }
               />
             </div>
@@ -289,9 +419,12 @@ export default function SettingsPage() {
             </div>
             <Switch
               id="maintenance-mode"
-              checked={settings.maintenanceMode}
+              checked={settings.system.maintenance_mode}
               onCheckedChange={(checked) =>
-                setSettings({ ...settings, maintenanceMode: checked })
+                setSettings({
+                  ...settings,
+                  system: { ...settings.system, maintenance_mode: checked },
+                })
               }
             />
           </div>
@@ -299,13 +432,14 @@ export default function SettingsPage() {
       </Card>
 
       <div className="flex gap-4">
-        <Button size="lg" onClick={handleSave} disabled={loading}>
+        <Button size="lg" onClick={handleSave} disabled={loading || fetching}>
           {loading && <Loader variant="classic" size="sm" className="mr-2" />}
           <Save className="w-4 h-4 mr-2" />
           Save All Settings
         </Button>
-        <Button size="lg" variant="outline" disabled={loading}>
-          Reset to Defaults
+        <Button size="lg" variant="outline" onClick={handleReset} disabled={loading || fetching}>
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Reset to Saved
         </Button>
       </div>
     </div>
