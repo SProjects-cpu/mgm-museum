@@ -91,7 +91,9 @@ export default function BookingsPage() {
         params.append('search', search);
       }
 
-      const response = await fetch(`/api/admin/bookings?${params}`);
+      const response = await fetch(`/api/admin/bookings?${params}`, {
+        credentials: 'same-origin', // ✅ Include cookies in request
+      });
       
       if (!response.ok) {
         throw new Error('Failed to fetch bookings');
@@ -167,6 +169,7 @@ export default function BookingsPage() {
       const response = await fetch('/api/admin/export/bookings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin', // ✅ Include cookies in request
         body: JSON.stringify(body),
       });
 

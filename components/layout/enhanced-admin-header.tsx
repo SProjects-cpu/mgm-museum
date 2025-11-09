@@ -9,7 +9,7 @@ import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { NotificationPanel } from "@/components/admin/notification-panel";
 import { RealTimeIndicator } from "@/components/admin/real-time-indicator";
-import { clearAdminSession } from "@/lib/auth/admin-auth";
+import { supabase } from "@/lib/supabase/config";
 import { toast } from "sonner";
 
 export function AdminHeader() {
@@ -17,10 +17,16 @@ export function AdminHeader() {
   const [showNotifications, setShowNotifications] = useState(false);
   const notificationRef = useRef<HTMLDivElement>(null);
 
-  const handleLogout = () => {
-    clearAdminSession();
-    toast.success("Logged out successfully");
-    router.push('/admin/login');
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      toast.success("Logged out successfully");
+      router.push('/admin/login');
+      router.refresh(); // Refresh to clear any cached data
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast.error("Logout failed");
+    }
   };
 
   // Close notifications when clicking outside
