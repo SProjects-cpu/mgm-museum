@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 // GET - Fetch all exhibitions for public site
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const searchParams = request.nextUrl.searchParams;
     const featured = searchParams.get('featured');
     const category = searchParams.get('category');
