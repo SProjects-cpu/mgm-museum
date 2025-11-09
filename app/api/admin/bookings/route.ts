@@ -85,8 +85,8 @@ export async function GET(request: NextRequest) {
           end_time
         )
       `, { count: 'exact' })
-      .gte('booking_date', format(startDate, 'yyyy-MM-dd'))
-      .lte('booking_date', format(endDate, 'yyyy-MM-dd'));
+      .gte('created_at', startDate.toISOString())
+      .lte('created_at', endDate.toISOString());
 
     // Add status filter
     if (status && status !== 'all') {
