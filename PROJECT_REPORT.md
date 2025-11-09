@@ -3927,114 +3927,35 @@ COMMENT ON TABLE payment_orders IS 'Razorpay payment order tracking with cart sn
 - GET `/api/admin/bookings` - All bookings
 - GET `/api/admin/analytics` - Analytics data
 
-## Appendix C: Environment Variables
+## Appendices
 
-```env
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=your-project-url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
-SUPABASE_SERVICE_ROLE_KEY=your-service-key
+**Note:** Complete technical appendices have been extracted to a separate document for better organization and maintainability.
 
-# Razorpay
-RAZORPAY_KEY_ID=your-key-id
-RAZORPAY_KEY_SECRET=your-key-secret
-NEXT_PUBLIC_RAZORPAY_KEY_ID=your-key-id
+**See:** [APPENDIX.md](./APPENDIX.md) for comprehensive documentation including:
 
-# Email
-RESEND_API_KEY=your-resend-key
+- **Appendix A:** Database Schema - Complete table structures, relationships, and migrations
+- **Appendix B:** API Documentation - All REST and GraphQL endpoints with examples
+- **Appendix C:** Environment Variables - Required and optional configuration
+- **Appendix D:** Deployment Guide - Step-by-step deployment instructions
+- **Appendix E:** User Manual - Guides for visitors and administrators
+- **Appendix F:** Troubleshooting Guide - Common issues and solutions
+- **Appendix G:** Glossary - Technical and business terms
 
-# Site
-NEXT_PUBLIC_SITE_URL=https://mgmapjscicentre.org
-```
+### Quick Reference
 
-## Appendix D: Deployment Guide
+**Database:** 18 core tables organized into User Management, Exhibition & Show Management, Booking & Payment, Customer Engagement, and Content & Analytics groups.
 
-### Prerequisites
-1. Node.js 20.0.0+
-2. npm 9.0.0+
-3. Vercel account
-4. Supabase project
-5. Razorpay account
-6. Resend account
+**API Endpoints:** 50+ REST endpoints covering bookings, payments, tickets, exhibitions, shows, cart management, feedback, and admin operations.
 
-### Deployment Steps
-1. Clone repository
-2. Install dependencies: `npm install`
-3. Configure environment variables
-4. Build project: `npm run build`
-5. Deploy to Vercel: `vercel --prod`
-6. Run database migrations
-7. Verify deployment
+**Key Technologies:**
+- Frontend: Next.js 15, React 19, TypeScript 5, Tailwind CSS v4
+- Backend: Supabase (PostgreSQL 15), Razorpay, Resend
+- Hosting: Vercel with global CDN
+- Security: Row Level Security (RLS), JWT auth, encrypted payment credentials
 
-## Appendix E: User Manual
+**Deployment:** Automated via Vercel with environment variable configuration and database migration execution.
 
-### For Visitors
-
-**How to Book Tickets:**
-1. Visit https://mgmapjscicentre.org
-2. Click "Book Tickets Now"
-3. Select exhibition or show
-4. Choose date and time
-5. Select ticket quantities
-6. Enter your details
-7. Complete payment
-8. Download your ticket
-
-**How to Download Tickets:**
-1. Check your email for confirmation
-2. Click "Download Ticket" button
-3. Or login to your dashboard
-4. Go to "My Bookings"
-5. Click "Download" next to your booking
-
-### For Administrators
-
-**How to Manage Bookings:**
-1. Login to admin panel
-2. Navigate to "Bookings"
-3. Use filters to find bookings
-4. Click on booking to view details
-5. Update status or cancel if needed
-
-**How to Generate Reports:**
-1. Go to "Analytics" section
-2. Select date range
-3. Choose report type
-4. Click "Export CSV"
-
-## Appendix F: Troubleshooting Guide
-
-### Common Issues
-
-**Issue: Payment Failed**
-- Check internet connection
-- Verify payment details
-- Try different payment method
-- Contact support if issue persists
-
-**Issue: Ticket Not Received**
-- Check spam/junk folder
-- Verify email address
-- Download from dashboard
-- Contact support with booking reference
-
-**Issue: Cannot Login**
-- Verify email and password
-- Use "Forgot Password" if needed
-- Clear browser cache
-- Try different browser
-
-## Appendix G: Glossary
-
-**Terms:**
-- **Booking Reference**: Unique identifier for each booking (format: MGM-YYYYMMDD-XXXX)
-- **Cart Expiration**: 15-minute timeout for items in cart
-- **Payment Gateway**: Razorpay service for processing payments
-- **PDF Ticket**: Downloadable ticket with QR code
-- **PWA**: Progressive Web App - installable web application
-- **QR Code**: Machine-readable code for ticket verification
-- **RLS**: Row Level Security - database security feature
-- **Time Slot**: Specific date and time for exhibition/show visit
+For detailed technical specifications, troubleshooting procedures, and operational guides, refer to the complete [APPENDIX.md](./APPENDIX.md) document.
 
 ---
 

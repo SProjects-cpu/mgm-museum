@@ -1,90 +1,215 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServiceSupabase } from '@/lib/supabase/config';
+import { createClient } from '@/lib/supabase/server';
+import { format, subDays, startOfDay, endOfDay, startOfToday, startOfTomorrow, endOfTomorrow } from 'date-fns';
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
+    const supabase = await createClient();
     
-    // Pagination
+    // Verify user is authenticated and has admin role
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: 'Unauthorized. Please login as admin.' },
+        { status: 401 }
+      );
+    }
+
+    // Check if user has admin role
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (userError || !userData || !['admin', 'super_admin'].includes(userData.role)) {
+      return NextResponse.json(
+        { error: 'Forbidden. Admin access required.' },
+        { status: 403 }
+      );
+    }
+
+    // Parse query parameters
+    const searchParams = request.nextUrl.searchParams;
+    const dateRange = searchParams.get('dateRange') || 'all';
+    const customStartDate = searchParams.get('startDate');
+    const customEndDate = searchParams.get('endDate');
+    const status = searchParams.get('status');
+    const search = searchParams.get('search');
     const page = parseInt(searchParams.get('page') || '1');
     const limit = parseInt(searchParams.get('limit') || '50');
-    const offset = (page - 1) * limit;
+    const sortBy = searchParams.get('sortBy') || 'created_at';
+    const sortOrder = searchParams.get('sortOrder') || 'desc';
 
-    // Filters
-    const startDate = searchParams.get('startDate');
-    const endDate = searchParams.get('endDate');
-    const status = searchParams.get('status');
-    const paymentStatus = searchParams.get('paymentStatus');
-    const search = searchParams.get('search');
+    // Calculate date range
+    let startDate: Date;
+    let endDate: Date;
 
-    const supabase = getServiceSupabase();
+    switch (dateRange) {
+      case 'today':
+        startDate = startOfToday();
+        endDate = endOfDay(new Date());
+        break;
+      case 'tomorrow':
+        startDate = startOfTomorrow();
+        endDate = endOfTomorrow();
+        break;
+      case 'last_week':
+        startDate = startOfDay(subDays(new Date(), 7));
+        endDate = endOfDay(new Date());
+        break;
+      case 'last_month':
+        startDate = startOfDay(subDays(new Date(), 30));
+        endDate = endOfDay(new Date());
+        break;
+      case 'custom':
+        if (!customStartDate || !customEndDate) {
+          return NextResponse.json(
+            { error: 'Custom date range requires startDate and endDate parameters' },
+            { status: 400 }
+          );
+        }
+        startDate = startOfDay(new Date(customStartDate));
+        endDate = endOfDay(new Date(customEndDate));
+        break;
+      default: // 'all'
+        startDate = new Date('2020-01-01'); // Far past date
+        endDate = new Date('2030-12-31'); // Far future date
+    }
 
-    // Build query
+    // Build the query
     let query = supabase
       .from('bookings')
       .select(`
-        *,
-        exhibition:exhibitions(name),
-        show:shows(name),
-        time_slot:time_slots(start_time, end_time)
-      `, { count: 'exact' });
+        id,
+        booking_reference,
+        guest_name,
+        guest_email,
+        guest_phone,
+        user_id,
+        booking_date,
+        time_slot_id,
+        total_amount,
+        status,
+        payment_details,
+        created_at,
+        users:user_id (
+          full_name,
+          email,
+          phone
+        ),
+        tickets (
+          ticket_number
+        ),
+        time_slots:time_slot_id (
+          start_time,
+          end_time
+        )
+      `, { count: 'exact' })
+      .gte('booking_date', format(startDate, 'yyyy-MM-dd'))
+      .lte('booking_date', format(endDate, 'yyyy-MM-dd'));
 
-    // Apply filters
-    if (startDate) {
-      query = query.gte('booking_date', startDate);
-    }
-    if (endDate) {
-      query = query.lte('booking_date', endDate);
-    }
-    if (status) {
+    // Add status filter
+    if (status && status !== 'all') {
       query = query.eq('status', status);
     }
-    if (paymentStatus) {
-      query = query.eq('payment_status', paymentStatus);
-    }
+
+    // Add search filter
     if (search) {
-      query = query.or(`booking_reference.ilike.%${search}%,visitor_name.ilike.%${search}%,visitor_email.ilike.%${search}%`);
+      query = query.or(`booking_reference.ilike.%${search}%,guest_name.ilike.%${search}%,guest_email.ilike.%${search}%`);
     }
 
-    // Apply pagination and ordering
-    query = query
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+    // Add sorting
+    const validSortColumns = ['created_at', 'booking_date', 'total_amount', 'status', 'booking_reference'];
+    const sortColumn = validSortColumns.includes(sortBy) ? sortBy : 'created_at';
+    query = query.order(sortColumn, { ascending: sortOrder === 'asc' });
 
-    const { data: bookings, error, count } = await query;
+    // Add pagination
+    const offset = (page - 1) * limit;
+    query = query.range(offset, offset + limit - 1);
 
-    if (error) {
-      console.error('Error fetching bookings:', error);
+    // Execute query
+    const { data: bookingsData, error: bookingsError, count } = await query;
+
+    if (bookingsError) {
+      console.error('[Bookings API] Error fetching bookings:', bookingsError);
       return NextResponse.json(
-        { success: false, message: 'Failed to fetch bookings' },
+        { error: 'Failed to fetch bookings', details: bookingsError.message },
         { status: 500 }
       );
     }
 
-    // Format response
-    const formattedBookings = bookings?.map((booking) => ({
-      ...booking,
-      exhibitionName: booking.exhibition?.name,
-      showName: booking.show?.name,
-      timeSlot: booking.time_slot
-        ? `${booking.time_slot.start_time} - ${booking.time_slot.end_time}`
-        : 'N/A',
-    }));
+    // Get booking tickets count for each booking
+    const bookingIds = bookingsData?.map(b => b.id) || [];
+    const { data: ticketCounts } = await supabase
+      .from('booking_tickets')
+      .select('booking_id, quantity')
+      .in('booking_id', bookingIds);
+
+    // Create a map of booking_id to total tickets
+    const ticketCountMap = new Map<string, number>();
+    ticketCounts?.forEach(tc => {
+      const current = ticketCountMap.get(tc.booking_id) || 0;
+      ticketCountMap.set(tc.booking_id, current + tc.quantity);
+    });
+
+    // Transform data to match the expected format
+    const bookings = bookingsData?.map(booking => {
+      const visitorName = booking.guest_name || booking.users?.full_name || 'N/A';
+      const visitorEmail = booking.guest_email || booking.users?.email || 'N/A';
+      const visitorPhone = booking.guest_phone || booking.users?.phone || 'N/A';
+      const ticketNumber = booking.tickets?.[0]?.ticket_number || 'N/A';
+      const razorpayId = booking.payment_details?.razorpay_payment_id || 'N/A';
+      const visitTimeSlot = booking.time_slots 
+        ? `${booking.time_slots.start_time} - ${booking.time_slots.end_time}`
+        : 'N/A';
+      const numberOfTickets = ticketCountMap.get(booking.id) || 0;
+
+      return {
+        id: booking.id,
+        visitorName,
+        visitorEmail,
+        visitorPhone,
+        bookingReference: booking.booking_reference,
+        ticketNumber,
+        razorpayId,
+        visitDate: booking.booking_date,
+        visitTimeSlot,
+        numberOfTickets,
+        amountPaid: booking.total_amount,
+        status: booking.status,
+        bookingTimestamp: booking.created_at,
+      };
+    }) || [];
+
+    // Calculate pagination
+    const totalPages = Math.ceil((count || 0) / limit);
 
     return NextResponse.json({
-      success: true,
-      bookings: formattedBookings,
+      bookings,
       pagination: {
+        total: count || 0,
         page,
         limit,
-        total: count || 0,
-        totalPages: Math.ceil((count || 0) / limit),
+        totalPages,
       },
+      filters: {
+        dateRange,
+        startDate: format(startDate, 'yyyy-MM-dd'),
+        endDate: format(endDate, 'yyyy-MM-dd'),
+        status: status || 'all',
+        search: search || '',
+      }
     });
+
   } catch (error: any) {
-    console.error('Error in admin bookings API:', error);
+    console.error('[Bookings API] Unexpected error:', error);
     return NextResponse.json(
-      { success: false, message: error.message || 'Internal server error' },
+      { 
+        error: 'An unexpected error occurred',
+        details: process.env.NODE_ENV === 'development' ? error.message : undefined
+      },
       { status: 500 }
     );
   }
