@@ -1,65 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { verifyAdminAuth } from '@/lib/auth/admin-auth';
 
 export async function GET(request: NextRequest) {
   try {
-    // Get authenticated user
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
-      return NextResponse.json(
-        { success: false, message: 'Authentication required' },
-        { status: 401 }
-      );
-    }
-
-    // Create Supabase client with user's auth token
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        global: {
-          headers: {
-            Authorization: authHeader
-          }
-        }
-      }
-    );
-
-    // Get authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !user) {
-      console.error('Auth error:', authError);
-      return NextResponse.json(
-        { success: false, message: 'Invalid authentication' },
-        { status: 401 }
-      );
-    }
-
-    // Verify user is admin
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    console.log('User data:', { userId: user.id, userData, userError });
-
-    if (userError) {
-      console.error('Error fetching user role:', userError);
-      return NextResponse.json(
-        { success: false, message: `Failed to verify admin status: ${userError.message}` },
-        { status: 500 }
-      );
-    }
-
-    if (!userData || (userData.role !== 'admin' && userData.role !== 'super_admin')) {
-      console.log('Access denied - user role:', userData?.role);
-      return NextResponse.json(
-        { success: false, message: `Admin access required. Current role: ${userData?.role || 'none'}` },
-        { status: 403 }
-      );
-    }
+    const { error: authError, supabase } = await verifyAdminAuth();
+    if (authError) return authError;
 
     // Get query parameters
     const { searchParams } = new URL(request.url);
