@@ -6,7 +6,7 @@ import { slugify } from '@/lib/utils';
 // GET - Fetch all exhibitions for admin
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const searchParams = request.nextUrl.searchParams;
     const status = searchParams.get('status');
     const category = searchParams.get('category');
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
 // POST - Create new exhibition
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const body = await request.json();
 
     const {
@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
 // PUT - Update exhibition
 export async function PUT(request: NextRequest) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const body = await request.json();
     const { id, ...updates } = body;
 
