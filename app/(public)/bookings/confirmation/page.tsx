@@ -203,7 +203,10 @@ export default function BookingConfirmationPage() {
                     {(() => {
                       // Priority 1: Use slot_date from time_slots (most accurate)
                       const dateToUse = booking.time_slots?.slot_date || booking.booking_date;
-                      return new Date(dateToUse).toLocaleDateString('en-US', {
+                      // Parse date without timezone conversion to avoid off-by-one errors
+                      const [year, month, day] = dateToUse.split('-').map(Number);
+                      const visitDateObj = new Date(year, month - 1, day); // month is 0-indexed
+                      return visitDateObj.toLocaleDateString('en-US', {
                         weekday: 'long',
                         year: 'numeric',
                         month: 'long',

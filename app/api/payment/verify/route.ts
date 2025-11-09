@@ -352,7 +352,10 @@ export async function POST(request: NextRequest) {
         const eventTitle = exhibitions?.name || shows?.name || 'Museum Visit';
         
         if (timeSlots) {
-          const visitDate = new Date(timeSlots.slot_date).toLocaleDateString('en-US', {
+          // Parse date without timezone conversion to avoid off-by-one errors
+          const [year, month, day] = timeSlots.slot_date.split('-').map(Number);
+          const visitDateObj = new Date(year, month - 1, day); // month is 0-indexed
+          const visitDate = visitDateObj.toLocaleDateString('en-US', {
             weekday: 'long',
             year: 'numeric',
             month: 'long',
