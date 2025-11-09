@@ -16,6 +16,11 @@ export default function BookingConfirmationPage() {
   const [loading, setLoading] = useState(true);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
 
+  // Dismiss any lingering toasts when page loads
+  useEffect(() => {
+    toast.dismiss();
+  }, []);
+
   useEffect(() => {
     const fetchBookings = async () => {
       if (bookingIds.length === 0) {
