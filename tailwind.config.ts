@@ -88,7 +88,20 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
+  plugins: [
+    // Custom plugin for black hover effect
+    function({ addUtilities }: any) {
+      const newUtilities = {
+        '.hover-black': {
+          '@apply transition-all duration-200': {},
+          '&:hover': {
+            '@apply bg-black text-white border-black': {},
+          },
+        },
+      };
+      addUtilities(newUtilities);
+    },
+  ],
 };
 
 export default config;

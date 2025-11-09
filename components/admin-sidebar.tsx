@@ -84,6 +84,11 @@ const adminData = {
       icon: BarChart3,
     },
     {
+      title: "Feedbacks",
+      url: "/admin/feedbacks",
+      icon: Sparkles,
+    },
+    {
       title: "Settings",
       url: "/admin/settings",
       icon: Settings,
