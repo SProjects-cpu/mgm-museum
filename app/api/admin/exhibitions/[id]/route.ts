@@ -1,6 +1,7 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { verifyAdminAuth } from '@/lib/auth/admin-auth';
 
 type Params = Promise<{ id: string }>;
 
@@ -10,8 +11,10 @@ export async function GET(
   { params }: { params: Params }
 ) {
   try {
+    const { error: authError, supabase } = await verifyAdminAuth();
+    if (authError) return authError;
+
     const { id } = await params;
-    const supabase = createClient();
 
     const { data: exhibition, error } = await supabase
       .from('exhibitions')
@@ -25,16 +28,16 @@ export async function GET(
     if (error) {
       console.error('Error fetching exhibition:', error);
       return NextResponse.json(
-        { error: 'Exhibition not found' },
+        { error: 'Exhibition not found', details: error.message },
         { status: 404 }
       );
     }
 
     return NextResponse.json({ exhibition });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in exhibition API:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: error.message },
       { status: 500 }
     );
   }
@@ -46,8 +49,10 @@ export async function PUT(
   { params }: { params: Params }
 ) {
   try {
+    const { error: authError, supabase } = await verifyAdminAuth();
+    if (authError) return authError;
+
     const { id } = await params;
-    const supabase = createClient();
     const body = await request.json();
 
     const {
@@ -87,7 +92,7 @@ export async function PUT(
     if (error) {
       console.error('Error updating exhibition:', error);
       return NextResponse.json(
-        { error: 'Failed to update exhibition' },
+        { error: 'Failed to update exhibition', details: error.message },
         { status: 500 }
       );
     }
@@ -96,10 +101,10 @@ export async function PUT(
       exhibition,
       message: 'Exhibition updated successfully'
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in update exhibition API:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: error.message },
       { status: 500 }
     );
   }
@@ -111,8 +116,10 @@ export async function DELETE(
   { params }: { params: Params }
 ) {
   try {
+    const { error: authError, supabase } = await verifyAdminAuth();
+    if (authError) return authError;
+
     const { id } = await params;
-    const supabase = createClient();
 
     // Delete related pricing first
     await supabase
@@ -129,7 +136,7 @@ export async function DELETE(
     if (error) {
       console.error('Error deleting exhibition:', error);
       return NextResponse.json(
-        { error: 'Failed to delete exhibition' },
+        { error: 'Failed to delete exhibition', details: error.message },
         { status: 500 }
       );
     }
@@ -137,10 +144,10 @@ export async function DELETE(
     return NextResponse.json({ 
       message: 'Exhibition deleted successfully'
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in delete exhibition API:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: error.message },
       { status: 500 }
     );
   }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -49,6 +49,7 @@ export function ExhibitionDialog({
 }: ExhibitionDialogProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     name: exhibition?.name || "",
     description: exhibition?.description || "",
@@ -61,6 +62,50 @@ export function ExhibitionDialog({
     pricing: exhibition?.pricing || [],
   });
 
+  // Fetch exhibition data when dialog opens in edit mode
+  const fetchExhibitionData = async () => {
+    if (mode === "edit" && exhibition?.id && open) {
+      try {
+        setLoading(true);
+        setFetchError(null);
+        const response = await fetch(`/api/admin/exhibitions/${exhibition.id}`);
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || 'Failed to fetch exhibition details');
+        }
+        
+        const data = await response.json();
+        const exhibitionData = data.exhibition;
+        
+        setFormData({
+          name: exhibitionData.name || "",
+          description: exhibitionData.description || "",
+          shortDescription: exhibitionData.short_description || "",
+          category: exhibitionData.category || "planetarium",
+          capacity: exhibitionData.capacity || 100,
+          durationMinutes: exhibitionData.duration_minutes || 60,
+          status: exhibitionData.status || "active",
+          featured: exhibitionData.featured || false,
+          pricing: exhibitionData.pricing || [],
+        });
+      } catch (error: any) {
+        console.error('Error fetching exhibition:', error);
+        setFetchError(error.message);
+        toast.error(error.message || 'Failed to load exhibition details');
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  // Fetch data when dialog opens
+  useEffect(() => {
+    if (open) {
+      fetchExhibitionData();
+    }
+  }, [open]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -72,10 +117,14 @@ export function ExhibitionDialog({
       
       const method = mode === "create" ? 'POST' : 'PUT';
 
+      const payload = mode === "edit" 
+        ? { ...formData, id: exhibition.id }
+        : formData;
+
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -133,6 +182,12 @@ export function ExhibitionDialog({
               : "Update exhibition details and settings."}
           </DialogDescription>
         </DialogHeader>
+
+        {fetchError && (
+          <div className="bg-destructive/10 text-destructive px-4 py-3 rounded-md text-sm">
+            {fetchError}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Basic Information */}
