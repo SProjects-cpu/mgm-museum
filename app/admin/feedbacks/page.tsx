@@ -44,8 +44,8 @@ export default function AdminFeedbacksPage() {
   });
 
   // Filters
-  const [ratingFilter, setRatingFilter] = useState<string>('');
-  const [eventTypeFilter, setEventTypeFilter] = useState<string>('');
+  const [ratingFilter, setRatingFilter] = useState<string>('all');
+  const [eventTypeFilter, setEventTypeFilter] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
@@ -66,8 +66,8 @@ export default function AdminFeedbacksPage() {
         limit: pagination.limit.toString(),
       });
 
-      if (ratingFilter) params.append('rating', ratingFilter);
-      if (eventTypeFilter) params.append('event_type', eventTypeFilter);
+      if (ratingFilter && ratingFilter !== 'all') params.append('rating', ratingFilter);
+      if (eventTypeFilter && eventTypeFilter !== 'all') params.append('event_type', eventTypeFilter);
       if (searchQuery) params.append('search', searchQuery);
 
       const response = await fetch(`/api/admin/feedbacks?${params}`, {
@@ -163,7 +163,7 @@ export default function AdminFeedbacksPage() {
                   <SelectValue placeholder="All Ratings" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Ratings</SelectItem>
+                  <SelectItem value="all">All Ratings</SelectItem>
                   <SelectItem value="5">5 Stars</SelectItem>
                   <SelectItem value="4">4 Stars</SelectItem>
                   <SelectItem value="3">3 Stars</SelectItem>
@@ -178,7 +178,7 @@ export default function AdminFeedbacksPage() {
                   <SelectValue placeholder="All Events" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Events</SelectItem>
+                  <SelectItem value="all">All Events</SelectItem>
                   <SelectItem value="exhibition">Exhibitions</SelectItem>
                   <SelectItem value="show">Shows</SelectItem>
                 </SelectContent>
