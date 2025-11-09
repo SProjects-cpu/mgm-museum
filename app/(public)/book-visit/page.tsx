@@ -85,6 +85,10 @@ export default function BookVisitPage() {
         setAddingToCart(false);
         return;
       }
+      
+      // User is logged in - add to cart directly
+      console.log('User is logged in, adding to cart directly');
+      
       // Convert selected tickets to the format expected by cart
       const tickets = {
         adult: selectedTickets.find(t => t.ticketType.toLowerCase() === 'adult')?.quantity || 0,
@@ -94,6 +98,8 @@ export default function BookVisitPage() {
       };
 
       const totalTickets = Object.values(tickets).reduce((sum, qty) => sum + qty, 0);
+
+      console.log('Tickets to add:', { tickets, totalTickets });
 
       // Create a full TimeSlot object for the cart
       const fullTimeSlot = {
@@ -111,6 +117,14 @@ export default function BookVisitPage() {
         itemName: exhibitionName,
       };
 
+      console.log('Adding to cart with data:', {
+        exhibitionId,
+        exhibitionName,
+        timeSlotId: selectedTimeSlot.id,
+        bookingDate: selectedDate.toISOString().split('T')[0],
+        totalTickets,
+      });
+
       // Add to cart
       await addItem({
         exhibitionId: exhibitionId,
@@ -123,6 +137,7 @@ export default function BookVisitPage() {
         subtotal: totalAmount,
       });
 
+      console.log('Successfully added to cart');
       toast.success('Added to cart! Redirecting to checkout...');
       
       // Redirect to checkout
@@ -131,6 +146,7 @@ export default function BookVisitPage() {
       }, 1000);
     } catch (error: any) {
       console.error('Error adding to cart:', error);
+      console.error('Error details:', error.message, error.stack);
       toast.error(error.message || 'Failed to add to cart');
       setAddingToCart(false);
     }
