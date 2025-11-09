@@ -23,14 +23,14 @@ export async function verifyAdminAuth() {
   }
 
   // Verify admin role
-  const { data: profile, error: profileError } = await supabase
-    .from('profiles')
+  const { data: user, error: userError } = await supabase
+    .from('users')
     .select('role')
     .eq('id', session.user.id)
     .single();
 
-  if (profileError || profile?.role !== 'admin') {
-    console.error('Admin verification failed:', profileError);
+  if (userError || !user || (user.role !== 'admin' && user.role !== 'super_admin')) {
+    console.error('Admin verification failed:', userError);
     return {
       error: NextResponse.json(
         { error: 'Forbidden - Admin access required' },
