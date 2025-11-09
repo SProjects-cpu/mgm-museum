@@ -33,7 +33,7 @@ import { ExhibitionContentManager } from "@/components/admin/exhibition-content-
 import { TimeSlotsManager } from "@/components/admin/time-slots-manager";
 import { PricingManagerWrapper } from "@/components/admin/pricing-manager-wrapper";
 import { ScheduleManager } from "@/components/admin/schedule-manager";
-import { FileUpload } from "@/components/admin/file-upload";
+import { ImageUploadZone } from "@/components/admin/image-upload-zone";
 
 interface Props {
   exhibitionId: string;
@@ -115,22 +115,7 @@ export function ExhibitionDetailManagement({ exhibitionId }: Props) {
     }
   };
 
-  const addImage = () => {
-    const url = prompt("Enter image URL:");
-    if (url) {
-      setFormData({
-        ...formData,
-        images: [...formData.images, url],
-      });
-    }
-  };
 
-  const removeImage = (index: number) => {
-    setFormData({
-      ...formData,
-      images: formData.images.filter((_, i) => i !== index),
-    });
-  };
 
   if (loading) {
     return (
@@ -320,45 +305,25 @@ export function ExhibitionDetailManagement({ exhibitionId }: Props) {
 
               <div className="space-y-2">
                 <Label>Images</Label>
-                <FileUpload
-                  bucket="exhibition-images"
-                  entityId={exhibitionId}
-                  onUploadComplete={(url) => {
+                <ImageUploadZone
+                  exhibitionId={exhibitionId}
+                  currentImages={formData.images}
+                  onUploadSuccess={(url) => {
                     setFormData({
                       ...formData,
                       images: [...formData.images, url],
                     });
                   }}
-                  label="Upload New Image"
-                  description="Upload images from your computer (JPEG, PNG, or WebP, max 5MB)"
+                  onDeleteImage={(url) => {
+                    setFormData({
+                      ...formData,
+                      images: formData.images.filter((img) => img !== url),
+                    });
+                  }}
+                  maxFiles={10}
+                  maxSizeMB={5}
+                  bucket="exhibition-images"
                 />
-                <div className="grid grid-cols-3 gap-4 mt-4">
-                  {formData.images.map((img, index) => (
-                    <div key={index} className="relative group">
-                      <img
-                        src={img}
-                        alt={`Image ${index + 1}`}
-                        className="w-full h-32 object-cover rounded-lg"
-                      />
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity"
-                        onClick={() => removeImage(index)}
-                      >
-                        Remove
-                      </Button>
-                    </div>
-                  ))}
-                  <Button
-                    variant="outline"
-                    className="h-32 border-dashed"
-                    onClick={addImage}
-                  >
-                    <ImageIcon className="w-6 h-6 mr-2" />
-                    Add Image URL
-                  </Button>
-                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
