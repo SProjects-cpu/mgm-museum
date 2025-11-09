@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
       .from('users')
       .select('role')
       .eq('id', user.id)
-      .single();
+      .single<{ role: string }>();
 
     if (userError || !userData || !['admin', 'super_admin'].includes(userData.role)) {
       return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
     const { data: settings, error: settingsError } = await supabase
       .from('system_settings')
       .select('*')
-      .order('category', { ascending: true });
+      .order('category', { ascending: true }) as any;
 
     if (settingsError) {
       console.error('[Settings API] Error fetching settings:', settingsError);
@@ -84,7 +84,7 @@ export async function PUT(request: NextRequest) {
       .from('users')
       .select('role')
       .eq('id', user.id)
-      .single();
+      .single<{ role: string }>();
 
     if (userError || !userData || !['admin', 'super_admin'].includes(userData.role)) {
       return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 });
@@ -148,8 +148,8 @@ export async function PUT(request: NextRequest) {
 
     // Update settings in database
     for (const update of updates) {
-      const { error: updateError } = await supabase
-        .from('system_settings')
+      const { error: updateError } = await (supabase
+        .from('system_settings') as any)
         .update({
           value: update.value,
           updated_by: user.id,

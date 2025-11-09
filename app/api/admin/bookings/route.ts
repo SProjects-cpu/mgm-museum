@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
       .from('users')
       .select('role')
       .eq('id', user.id)
-      .single();
+      .single<{ role: string }>();
 
     if (userError || !userData || !['admin', 'super_admin'].includes(userData.role)) {
       return NextResponse.json(
@@ -130,7 +130,7 @@ export async function GET(request: NextRequest) {
     query = query.range(offset, offset + limit - 1);
 
     // Execute query
-    const { data: bookingsData, error: bookingsError, count } = await query;
+    const { data: bookingsData, error: bookingsError, count } = await query as any;
 
     if (bookingsError) {
       console.error('[Bookings API] Error fetching bookings:', bookingsError);
@@ -141,15 +141,15 @@ export async function GET(request: NextRequest) {
     }
 
     // Get booking tickets count for each booking
-    const bookingIds = bookingsData?.map(b => b.id) || [];
+    const bookingIds = bookingsData?.map((b: any) => b.id) || [];
     const { data: ticketCounts } = await supabase
       .from('booking_tickets')
       .select('booking_id, quantity')
-      .in('booking_id', bookingIds);
+      .in('booking_id', bookingIds) as any;
 
     // Create a map of booking_id to total tickets
     const ticketCountMap = new Map<string, number>();
-    ticketCounts?.forEach(tc => {
+    ticketCounts?.forEach((tc: any) => {
       const current = ticketCountMap.get(tc.booking_id) || 0;
       ticketCountMap.set(tc.booking_id, current + tc.quantity);
     });

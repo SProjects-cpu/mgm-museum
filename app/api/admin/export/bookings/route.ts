@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       .from('users')
       .select('role')
       .eq('id', user.id)
-      .single();
+      .single<{ role: string }>();
 
     if (userError || !userData || !['admin', 'super_admin'].includes(userData.role)) {
       return NextResponse.json(
@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
       query = query.or(`booking_reference.ilike.%${search}%,guest_name.ilike.%${search}%,guest_email.ilike.%${search}%`);
     }
 
-    const { data: bookingsData, error: bookingsError } = await query;
+    const { data: bookingsData, error: bookingsError } = await query as any;
 
     if (bookingsError) {
       console.error('[Export API] Error fetching bookings:', bookingsError);
@@ -122,14 +122,14 @@ export async function POST(request: NextRequest) {
     }
 
     // Get booking tickets count
-    const bookingIds = bookingsData?.map(b => b.id) || [];
+    const bookingIds = bookingsData?.map((b: any) => b.id) || [];
     const { data: ticketCounts } = await supabase
       .from('booking_tickets')
       .select('booking_id, quantity')
-      .in('booking_id', bookingIds);
+      .in('booking_id', bookingIds) as any;
 
     const ticketCountMap = new Map<string, number>();
-    ticketCounts?.forEach(tc => {
+    ticketCounts?.forEach((tc: any) => {
       const current = ticketCountMap.get(tc.booking_id) || 0;
       ticketCountMap.set(tc.booking_id, current + tc.quantity);
     });

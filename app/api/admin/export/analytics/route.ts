@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       .from('users')
       .select('role')
       .eq('id', user.id)
-      .single();
+      .single<{ role: string }>();
 
     if (!userData || !['admin', 'super_admin'].includes(userData.role)) {
       return NextResponse.json(
