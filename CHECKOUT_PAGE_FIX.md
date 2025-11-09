@@ -58,6 +58,10 @@ To test the fix:
 - `app/api/cart/add/route.ts` - API endpoint for adding items to cart
 
 ## Deployment Status
-✅ Fixed and ready for deployment
+✅ Fixed and deployed
+
+**Update**: Initial deployment failed due to Turbopack bug (false positive route conflict).  
+**Fix**: Removed `--turbopack` flag from build script.  
+**Status**: Successfully deployed
 
 The checkout page now properly handles the book-visit flow without errors.
