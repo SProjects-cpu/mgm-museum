@@ -1,12 +1,13 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
-import { getServiceSupabase } from '@/lib/supabase/config';
 import { slugify } from '@/lib/utils';
+import { verifyAdminAuth } from '@/lib/auth/admin-auth';
 
 // GET - Fetch all shows
 export async function GET(request: NextRequest) {
   try {
-    const supabase = getServiceSupabase();
+    const { error: authError, supabase } = await verifyAdminAuth();
+    if (authError) return authError;
     const searchParams = request.nextUrl.searchParams;
     const status = searchParams.get('status');
     const type = searchParams.get('type');
@@ -51,7 +52,8 @@ export async function GET(request: NextRequest) {
 // POST - Create new show
 export async function POST(request: NextRequest) {
   try {
-    const supabase = getServiceSupabase();
+    const { error: authError, supabase } = await verifyAdminAuth();
+    if (authError) return authError;
     const body = await request.json();
 
     const {

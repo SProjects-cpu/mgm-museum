@@ -2,11 +2,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { slugify } from '@/lib/utils';
+import { verifyAdminAuth } from '@/lib/auth/admin-auth';
 
 // GET - Fetch all exhibitions for admin
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const { error: authError, supabase } = await verifyAdminAuth();
+    if (authError) return authError;
+
     const searchParams = request.nextUrl.searchParams;
     const status = searchParams.get('status');
     const category = searchParams.get('category');
@@ -50,7 +53,9 @@ export async function GET(request: NextRequest) {
 // POST - Create new exhibition
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const { error: authError, supabase } = await verifyAdminAuth();
+    if (authError) return authError;
+
     const body = await request.json();
 
     const {
@@ -162,7 +167,9 @@ export async function POST(request: NextRequest) {
 // PUT - Update exhibition
 export async function PUT(request: NextRequest) {
   try {
-    const supabase = await createClient();
+    const { error: authError, supabase } = await verifyAdminAuth();
+    if (authError) return authError;
+
     const body = await request.json();
     const { id, ...updates } = body;
 
