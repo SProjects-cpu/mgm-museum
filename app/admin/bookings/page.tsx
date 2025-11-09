@@ -54,7 +54,7 @@ export default function BookingsPage() {
   const [pagination, setPagination] = useState({
     total: 0,
     page: 1,
-    limit: 50,
+    limit: 10,
     totalPages: 1,
   });
   const [sortBy, setSortBy] = useState('created_at');
@@ -69,7 +69,7 @@ export default function BookingsPage() {
     try {
       const params = new URLSearchParams({
         page: page.toString(),
-        limit: '50',
+        limit: '10',
         sortBy,
         sortOrder,
       });
@@ -345,7 +345,7 @@ export default function BookingsPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
             <Table>
               <TableHeader>
                 <TableRow>
