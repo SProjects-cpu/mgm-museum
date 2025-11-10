@@ -90,6 +90,23 @@ export default function LoginPage() {
 
         if (error) throw error;
 
+        // Send welcome email via our API (using Resend)
+        if (data.user) {
+          try {
+            await fetch('/api/auth/send-welcome-email', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                email: formData.email,
+                name: formData.name,
+              }),
+            });
+          } catch (emailError) {
+            console.error('Failed to send welcome email:', emailError);
+            // Don't block signup if email fails
+          }
+        }
+
         // Check if email confirmation is required
         if (data.user && !data.session) {
           toast.info('Please check your email to confirm your account');

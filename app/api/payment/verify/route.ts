@@ -333,6 +333,12 @@ export async function POST(request: NextRequest) {
       const firstBooking = bookings[0];
       const guestEmail = paymentOrder.payment_email || user.email;
       
+      // Calculate total amount from ALL bookings (not just first one)
+      const totalAmount = bookings.reduce((sum, booking) => sum + Number(booking.total_amount), 0);
+      
+      // Count actual tickets created
+      const totalTickets = tickets.length;
+      
       // Get event details
       const { data: eventData } = await supabase
         .from('bookings')
@@ -379,8 +385,9 @@ export async function POST(request: NextRequest) {
             eventTitle,
             visitDate,
             timeSlot,
-            totalAmount: Number(firstBooking.total_amount),
-            ticketCount: bookings.length,
+            totalAmount: totalAmount, // Use aggregated total
+            ticketCount: totalTickets, // Use actual ticket count
+            bookingsCount: bookings.length,
           });
           
           sendBookingConfirmation({
@@ -390,8 +397,8 @@ export async function POST(request: NextRequest) {
             eventTitle,
             visitDate,
             timeSlot,
-            totalAmount: Number(firstBooking.total_amount),
-            ticketCount: bookings.length,
+            totalAmount: totalAmount, // Use aggregated total from all bookings
+            ticketCount: totalTickets, // Use actual ticket count
             paymentId: razorpay_payment_id,
           })
             .then((result) => {
