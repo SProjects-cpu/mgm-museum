@@ -84,8 +84,30 @@ export default function CheckoutPage() {
               if (!isMounted) return;
               
               // Validate required data
-              if (!data.exhibitionId || !data.selectedTimeSlot || !data.selectedTickets || !data.selectedDate) {
+              if (!data.exhibitionId || !data.selectedTimeSlot || !data.selectedTickets) {
                 throw new Error('Invalid booking data. Please try booking again.');
+              }
+              
+              // Safely handle date - ensure it's a valid date string
+              let bookingDate: string;
+              if (data.selectedDate) {
+                try {
+                  // Handle both string and Date object
+                  const dateObj = typeof data.selectedDate === 'string' 
+                    ? new Date(data.selectedDate) 
+                    : data.selectedDate;
+                  
+                  if (isNaN(dateObj.getTime())) {
+                    throw new Error('Invalid date');
+                  }
+                  
+                  bookingDate = dateObj.toISOString().split('T')[0];
+                } catch (e) {
+                  console.error('Date parsing error:', e);
+                  throw new Error('Invalid booking date. Please try booking again.');
+                }
+              } else {
+                throw new Error('Booking date is required. Please try booking again.');
               }
               
               const tickets = {
@@ -103,7 +125,7 @@ export default function CheckoutPage() {
 
               const fullTimeSlot = {
                 id: data.selectedTimeSlot.id,
-                slotDate: new Date(data.selectedDate).toISOString().split('T')[0],
+                slotDate: bookingDate,
                 startTime: data.selectedTimeSlot.startTime,
                 endTime: data.selectedTimeSlot.endTime,
                 capacity: data.selectedTimeSlot.totalCapacity,
@@ -129,7 +151,7 @@ export default function CheckoutPage() {
                 exhibitionName: data.exhibitionName,
                 timeSlotId: data.selectedTimeSlot.id,
                 timeSlot: fullTimeSlot,
-                bookingDate: new Date(data.selectedDate).toISOString().split('T')[0],
+                bookingDate: bookingDate,
                 tickets: tickets,
                 totalTickets: totalTickets,
                 subtotal: data.totalAmount,

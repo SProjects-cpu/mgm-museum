@@ -148,6 +148,23 @@ export async function sendBookingConfirmation(
   params: SendBookingConfirmationParams
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    // Validate email parameters
+    if (!params.to || !params.to.includes('@')) {
+      console.error('Invalid email address:', params.to);
+      return { success: false, error: 'Invalid email address' };
+    }
+
+    if (!params.bookingReference) {
+      console.error('Missing booking reference');
+      return { success: false, error: 'Missing booking reference' };
+    }
+
+    console.log('Preparing to send email:', {
+      to: params.to,
+      bookingReference: params.bookingReference,
+      from: EMAIL_CONFIG.from,
+    });
+
     // Generate email HTML
     const emailHtml = generateEmailHtml(params);
 
@@ -161,11 +178,17 @@ export async function sendBookingConfirmation(
     });
 
     if (error) {
-      console.error('Failed to send booking confirmation email:', error);
-      return { success: false, error: error.message };
+      console.error('Resend API error:', {
+        error,
+        errorMessage: error.message,
+        errorName: error.name,
+        to: params.to,
+        bookingReference: params.bookingReference,
+      });
+      return { success: false, error: error.message || 'Email service error' };
     }
 
-    console.log('Booking confirmation email sent successfully:', {
+    console.log('✅ Booking confirmation email sent successfully:', {
       emailId: data?.id,
       to: params.to,
       bookingReference: params.bookingReference,
@@ -173,7 +196,15 @@ export async function sendBookingConfirmation(
 
     return { success: true };
   } catch (error) {
-    console.error('Error sending booking confirmation email:', error);
+    console.error('💥 Exception in sendBookingConfirmation:', {
+      error,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error',
+      errorStack: error instanceof Error ? error.stack : undefined,
+      params: {
+        to: params.to,
+        bookingReference: params.bookingReference,
+      },
+    });
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',

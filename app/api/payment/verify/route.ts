@@ -373,6 +373,16 @@ export async function POST(request: NextRequest) {
           
           // Send email (don't block response if email fails)
           console.log('Attempting to send confirmation email to:', guestEmail);
+          console.log('Email parameters:', {
+            guestName: firstBooking.guest_name,
+            bookingReference: firstBooking.booking_reference,
+            eventTitle,
+            visitDate,
+            timeSlot,
+            totalAmount: Number(firstBooking.total_amount),
+            ticketCount: bookings.length,
+          });
+          
           sendBookingConfirmation({
             to: guestEmail,
             guestName: firstBooking.guest_name,
@@ -386,13 +396,22 @@ export async function POST(request: NextRequest) {
           })
             .then((result) => {
               if (result.success) {
-                console.log('Confirmation email sent successfully to:', guestEmail);
+                console.log('✅ Confirmation email sent successfully to:', guestEmail);
               } else {
-                console.error('Failed to send confirmation email:', result.error);
+                console.error('❌ Failed to send confirmation email:', {
+                  email: guestEmail,
+                  error: result.error,
+                  bookingRef: firstBooking.booking_reference,
+                });
               }
             })
             .catch((error) => {
-              console.error('Exception while sending confirmation email:', error);
+              console.error('💥 Exception while sending confirmation email:', {
+                email: guestEmail,
+                error: error.message,
+                stack: error.stack,
+                bookingRef: firstBooking.booking_reference,
+              });
             });
         }
       }
