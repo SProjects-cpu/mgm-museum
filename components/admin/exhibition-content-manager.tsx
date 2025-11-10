@@ -51,6 +51,7 @@ interface ContentSection {
   images: string[];
   display_order: number;
   active: boolean;
+  metadata: Record<string, any>;
 }
 
 interface Props {
@@ -214,13 +215,24 @@ export function ExhibitionContentManager({ exhibitionId }: Props) {
         ? { sectionId: editingSection.id, ...formData }
         : formData;
 
+      console.log('💾 Saving content section:', { url, method, body });
+
       const response = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
       });
 
-      if (!response.ok) throw new Error("Failed to save section");
+      console.log('📡 Response status:', response.status, response.statusText);
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('❌ Save failed:', errorData);
+        throw new Error(errorData.error || errorData.details || "Failed to save section");
+      }
+
+      const result = await response.json();
+      console.log('✅ Save successful:', result);
 
       toast.success(
         editingSection ? "Section updated successfully" : "Section created successfully"
@@ -237,6 +249,7 @@ export function ExhibitionContentManager({ exhibitionId }: Props) {
       });
       fetchSections();
     } catch (error: any) {
+      console.error('💥 Exception in handleSave:', error);
       toast.error(error.message);
     }
   };
@@ -284,6 +297,7 @@ export function ExhibitionContentManager({ exhibitionId }: Props) {
       content: section.content || "",
       images: section.images || [],
       active: section.active,
+      metadata: section.metadata || {},
     });
     setIsCreating(true);
   };
@@ -297,6 +311,7 @@ export function ExhibitionContentManager({ exhibitionId }: Props) {
       content: "",
       images: [],
       active: true,
+      metadata: {},
     });
   };
 
