@@ -351,7 +351,7 @@ export async function POST(request: NextRequest) {
         
         const eventTitle = exhibitions?.name || shows?.name || 'Museum Visit';
         
-        if (timeSlots) {
+        if (timeSlots && timeSlots.slot_date && timeSlots.start_time && timeSlots.end_time) {
           // Parse date without timezone conversion to avoid off-by-one errors
           const [year, month, day] = timeSlots.slot_date.split('-').map(Number);
           const visitDateObj = new Date(year, month - 1, day); // month is 0-indexed
@@ -413,6 +413,15 @@ export async function POST(request: NextRequest) {
                 bookingRef: firstBooking.booking_reference,
               });
             });
+        } else {
+          console.warn('⚠️ Cannot send confirmation email - missing time slot data:', {
+            hasTimeSlots: !!timeSlots,
+            hasSlotDate: timeSlots?.slot_date,
+            hasStartTime: timeSlots?.start_time,
+            hasEndTime: timeSlots?.end_time,
+            bookingRef: firstBooking.booking_reference,
+            bookingDate: firstBooking.booking_date,
+          });
         }
       }
     }
