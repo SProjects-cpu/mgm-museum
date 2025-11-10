@@ -49,6 +49,7 @@ export interface Exhibition {
   createdAt: Date;
   updatedAt: Date;
   pricing?: Pricing[];
+  contentSections?: any[]; // Content sections from CMS
 }
 
 // Show Interface

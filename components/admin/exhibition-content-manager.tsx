@@ -59,6 +59,7 @@ interface Props {
 
 const SECTION_TYPES = [
   { value: "booking_widget", label: "Book Your Visit Widget" },
+  { value: "pricing_display", label: "Pricing Display" },
   { value: "features", label: "Features" },
   { value: "highlights", label: "Highlights" },
   { value: "what_to_expect", label: "What to Expect" },

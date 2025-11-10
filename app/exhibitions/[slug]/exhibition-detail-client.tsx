@@ -57,6 +57,15 @@ export function ExhibitionDetailClient({ exhibition }: Props) {
     'Mobile ticket accepted'
   ];
 
+  // Get pricing display content from database or use defaults
+  const pricingDisplay = exhibition.contentSections?.find(
+    (section: any) => section.section_type === 'pricing_display'
+  );
+  
+  const pricingTitle = pricingDisplay?.title || 'Starting from';
+  const pricingFooter = pricingDisplay?.content || 'per person';
+  const showPrice = pricingDisplay?.metadata?.showPrice !== false;
+
   return (
     <div className="min-h-screen py-12">
       <div className="container px-4">
@@ -257,16 +266,18 @@ export function ExhibitionDetailClient({ exhibition }: Props) {
                   </p>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  {/* Price Display */}
+                  {/* Price Display - Editable from Admin Panel */}
                   <div className="text-center p-4 bg-primary/10 rounded-lg">
                     <div className="text-sm text-muted-foreground mb-1">
-                      Starting from
+                      {pricingTitle}
                     </div>
-                    <div className="text-3xl font-bold text-primary">
-                      {formatCurrency(exhibition.pricing?.[0]?.price || 0)}
-                    </div>
+                    {showPrice && (
+                      <div className="text-3xl font-bold text-primary">
+                        {formatCurrency(exhibition.pricing?.[0]?.price || 0)}
+                      </div>
+                    )}
                     <div className="text-xs text-muted-foreground mt-1">
-                      per person
+                      {pricingFooter}
                     </div>
                   </div>
 

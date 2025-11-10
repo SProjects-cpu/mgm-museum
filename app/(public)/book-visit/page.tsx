@@ -12,6 +12,7 @@ import { ArrowLeft, ArrowRight, Calendar, Clock, Ticket, CreditCard, Loader2, Sh
 import { useCartStore } from '@/lib/store/cart';
 import { supabase } from '@/lib/supabase/config';
 import { toast } from 'sonner';
+import { formatDateOnly } from '@/lib/utils/date-helpers';
 
 export default function BookVisitPage() {
   const router = useRouter();
@@ -79,7 +80,7 @@ export default function BookVisitPage() {
         const bookingData = {
           exhibitionId,
           exhibitionName,
-          selectedDate: selectedDate.toISOString(),
+          selectedDate: formatDateOnly(selectedDate), // Use date-only format
           selectedTimeSlot,
           selectedTickets,
           totalAmount,
@@ -115,8 +116,8 @@ export default function BookVisitPage() {
 
       console.log('Tickets to add:', { tickets, totalTickets });
 
-      // Safely format the booking date
-      const bookingDateStr = selectedDate.toISOString().split('T')[0];
+      // Safely format the booking date using date-only format
+      const bookingDateStr = formatDateOnly(selectedDate);
 
       // Create a full TimeSlot object for the cart
       const fullTimeSlot = {

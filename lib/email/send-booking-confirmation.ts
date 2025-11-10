@@ -146,7 +146,7 @@ function generateEmailHtml(params: SendBookingConfirmationParams): string {
  */
 export async function sendBookingConfirmation(
   params: SendBookingConfirmationParams
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; testMode?: boolean }> {
   try {
     // Check if email is configured
     if (!isEmailConfigured()) {
@@ -191,6 +191,20 @@ export async function sendBookingConfirmation(
     });
 
     if (error) {
+      // Check if it's a test mode restriction
+      if (error.message?.includes('testing emails')) {
+        console.warn('⚠️ Email sent in TEST MODE - recipient restricted');
+        console.warn('📧 Test mode only allows sending to: shivampaliwal37@gmail.com');
+        console.warn('🔧 To send to all customers, verify a domain at resend.com/domains');
+        console.warn('📖 See EMAIL_SETUP.md for detailed instructions');
+        
+        return {
+          success: false,
+          error: 'Email service in test mode. Only verified email addresses can receive emails. Please contact administrator.',
+          testMode: true,
+        };
+      }
+      
       console.error('❌ Resend API error:', {
         error,
         errorMessage: error.message,

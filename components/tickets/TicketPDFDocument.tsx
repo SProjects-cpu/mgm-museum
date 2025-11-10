@@ -15,6 +15,7 @@ import {
 } from '@react-pdf/renderer';
 import { getEventTitle, formatTimeSlot } from '@/lib/tickets/fetch-ticket-data';
 import { TicketPDFProps } from '@/types/tickets';
+import { formatDateForDisplay } from '@/lib/utils/date-helpers';
 
 /**
  * Museum brand colors
@@ -176,16 +177,10 @@ const styles = StyleSheet.create({
 });
 
 /**
- * Format date for display
+ * Format date for display (using date helper to avoid timezone issues)
  */
 function formatDate(dateString: string): string {
-  const date = new Date(dateString);
-  return date.toLocaleDateString('en-US', {
-    weekday: 'long',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+  return formatDateForDisplay(dateString);
 }
 
 /**

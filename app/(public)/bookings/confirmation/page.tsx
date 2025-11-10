@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { CheckCircle, Home, Download, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/config';
 import { toast } from 'sonner';
+import { formatDateForDisplay } from '@/lib/utils/date-helpers';
 
 export default function BookingConfirmationPage() {
   const router = useRouter();
@@ -203,15 +204,8 @@ export default function BookingConfirmationPage() {
                     {(() => {
                       // Priority 1: Use slot_date from time_slots (most accurate)
                       const dateToUse = booking.time_slots?.slot_date || booking.booking_date;
-                      // Parse date without timezone conversion to avoid off-by-one errors
-                      const [year, month, day] = dateToUse.split('-').map(Number);
-                      const visitDateObj = new Date(year, month - 1, day); // month is 0-indexed
-                      return visitDateObj.toLocaleDateString('en-US', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                      });
+                      // Use date helper to format without timezone conversion
+                      return formatDateForDisplay(dateToUse);
                     })()}
                   </div>
                   

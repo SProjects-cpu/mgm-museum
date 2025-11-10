@@ -16,10 +16,12 @@ if (!RESEND_API_KEY) {
 export const resend = new Resend(RESEND_API_KEY || 'missing-api-key');
 
 // Email configuration
-// Note: Using Resend's test domain. To use custom domain, verify it in Resend dashboard first.
+// Supports custom domain via environment variables
+// Falls back to test domain if not configured
 export const EMAIL_CONFIG = {
-  from: 'MGM Museum <onboarding@resend.dev>', // Resend test domain
-  replyTo: 'shivampaliwal37@gmail.com', // Your actual email for replies
+  from: process.env.EMAIL_FROM || 'MGM Museum <onboarding@resend.dev>',
+  replyTo: process.env.EMAIL_REPLY_TO || 'shivampaliwal37@gmail.com',
+  testMode: !process.env.EMAIL_FROM, // Auto-detect test mode
 };
 
 // Export function to check if email is configured
