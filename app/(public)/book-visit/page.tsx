@@ -68,6 +68,13 @@ export default function BookVisitPage() {
       // Check if user is logged in
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
+        // Validate selectedDate before storing
+        if (!selectedDate) {
+          toast.error('Please select a date');
+          setAddingToCart(false);
+          return;
+        }
+        
         // Store booking data in sessionStorage for after login
         const bookingData = {
           exhibitionId,
@@ -89,6 +96,13 @@ export default function BookVisitPage() {
       // User is logged in - add to cart directly
       console.log('User is logged in, adding to cart directly');
       
+      // Validate selectedDate
+      if (!selectedDate) {
+        toast.error('Please select a date');
+        setAddingToCart(false);
+        return;
+      }
+      
       // Convert selected tickets to the format expected by cart
       const tickets = {
         adult: selectedTickets.find(t => t.ticketType.toLowerCase() === 'adult')?.quantity || 0,
@@ -101,10 +115,13 @@ export default function BookVisitPage() {
 
       console.log('Tickets to add:', { tickets, totalTickets });
 
+      // Safely format the booking date
+      const bookingDateStr = selectedDate.toISOString().split('T')[0];
+
       // Create a full TimeSlot object for the cart
       const fullTimeSlot = {
         id: selectedTimeSlot.id,
-        slotDate: selectedDate.toISOString().split('T')[0],
+        slotDate: bookingDateStr,
         startTime: selectedTimeSlot.startTime,
         endTime: selectedTimeSlot.endTime,
         capacity: selectedTimeSlot.totalCapacity,
@@ -121,7 +138,7 @@ export default function BookVisitPage() {
         exhibitionId,
         exhibitionName,
         timeSlotId: selectedTimeSlot.id,
-        bookingDate: selectedDate.toISOString().split('T')[0],
+        bookingDate: bookingDateStr,
         totalTickets,
       });
 
@@ -131,7 +148,7 @@ export default function BookVisitPage() {
         exhibitionName: exhibitionName,
         timeSlotId: selectedTimeSlot.id,
         timeSlot: fullTimeSlot,
-        bookingDate: selectedDate.toISOString().split('T')[0],
+        bookingDate: bookingDateStr,
         tickets: tickets,
         totalTickets: totalTickets,
         subtotal: totalAmount,
