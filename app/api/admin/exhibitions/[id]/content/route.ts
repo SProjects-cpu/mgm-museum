@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { verifyAdminAuth } from '@/lib/auth/admin-auth';
 
 // GET - Fetch content sections for an exhibition
 export async function GET(
@@ -8,8 +8,10 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { error: authError, supabase } = await verifyAdminAuth();
+    if (authError) return authError;
+
     const { id } = await params;
-    const supabase = createClient();
 
     const { data: sections, error } = await supabase
       .from('exhibition_content_sections')
@@ -41,8 +43,10 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { error: authError, supabase } = await verifyAdminAuth();
+    if (authError) return authError;
+
     const { id } = await params;
-    const supabase = createClient();
     const body = await request.json();
 
     const {
@@ -104,8 +108,10 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { error: authError, supabase } = await verifyAdminAuth();
+    if (authError) return authError;
+
     const { id } = await params;
-    const supabase = createClient();
     const body = await request.json();
     const { sectionId, ...updates } = body;
 
@@ -160,8 +166,10 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { error: authError, supabase } = await verifyAdminAuth();
+    if (authError) return authError;
+
     const { id } = await params;
-    const supabase = createClient();
     const { searchParams } = new URL(request.url);
     const sectionId = searchParams.get('sectionId');
 
