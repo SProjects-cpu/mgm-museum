@@ -2,7 +2,7 @@
  * Send Booking Confirmation Email
  */
 
-import { resend, EMAIL_CONFIG } from './resend-client';
+import { resend, EMAIL_CONFIG, isEmailConfigured } from './resend-client';
 
 interface SendBookingConfirmationParams {
   to: string;
@@ -148,6 +148,16 @@ export async function sendBookingConfirmation(
   params: SendBookingConfirmationParams
 ): Promise<{ success: boolean; error?: string }> {
   try {
+    // Check if email is configured
+    if (!isEmailConfigured()) {
+      console.error('❌ RESEND_API_KEY not configured - cannot send email');
+      console.error('Booking details:', {
+        to: params.to,
+        bookingReference: params.bookingReference,
+      });
+      return { success: false, error: 'Email service not configured' };
+    }
+
     // Validate email parameters
     if (!params.to || !params.to.includes('@')) {
       console.error('Invalid email address:', params.to);
@@ -159,16 +169,19 @@ export async function sendBookingConfirmation(
       return { success: false, error: 'Missing booking reference' };
     }
 
-    console.log('Preparing to send email:', {
+    console.log('📧 Preparing to send booking confirmation email:', {
       to: params.to,
       bookingReference: params.bookingReference,
       from: EMAIL_CONFIG.from,
+      totalAmount: params.totalAmount,
+      ticketCount: params.ticketCount,
     });
 
     // Generate email HTML
     const emailHtml = generateEmailHtml(params);
 
     // Send email via Resend
+    console.log('🚀 Calling Resend API...');
     const { data, error } = await resend.emails.send({
       from: EMAIL_CONFIG.from,
       to: params.to,
@@ -178,7 +191,7 @@ export async function sendBookingConfirmation(
     });
 
     if (error) {
-      console.error('Resend API error:', {
+      console.error('❌ Resend API error:', {
         error,
         errorMessage: error.message,
         errorName: error.name,
