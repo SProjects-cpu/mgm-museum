@@ -146,6 +146,7 @@ export function ExhibitionContentManager({ exhibitionId }: Props) {
     content: "",
     images: [] as string[],
     active: true,
+    metadata: {} as Record<string, any>,
   });
 
   const sensors = useSensors(
@@ -232,6 +233,7 @@ export function ExhibitionContentManager({ exhibitionId }: Props) {
         content: "",
         images: [],
         active: true,
+        metadata: {},
       });
       fetchSections();
     } catch (error: any) {
