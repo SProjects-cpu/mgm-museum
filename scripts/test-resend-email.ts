@@ -1,47 +1,65 @@
+/**
+ * Test Resend Email API
+ * 
+ * This script tests if the Resend API key is working correctly
+ */
+
 import { Resend } from 'resend';
-import * as dotenv from 'dotenv';
-import * as path from 'path';
 
-// Load environment variables
-dotenv.config({ path: path.join(__dirname, '../.env.local') });
+const RESEND_API_KEY = 're_ZwMhju8q_FBigRbGgpHV3WtsReJbGJ8eE';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+async function testResendAPI() {
+  console.log('🧪 Testing Resend API');
+  console.log('====================\n');
 
-async function testResendEmail() {
-  console.log('Testing Resend API...\n');
-  console.log('API Key:', process.env.RESEND_API_KEY ? `${process.env.RESEND_API_KEY.substring(0, 10)}...` : 'NOT SET');
-  
   try {
+    const resend = new Resend(RESEND_API_KEY);
+
+    console.log('📧 Sending test email...');
+    
     const { data, error } = await resend.emails.send({
-      from: 'MGM Museum <onboarding@resend.dev>', // Using Resend's test domain
-      to: ['shivampaliwal37@gmail.com'], // Your email
-      subject: 'Test Email from MGM Museum',
+      from: 'MGM Museum <onboarding@resend.dev>',
+      to: 'shivampaliwal37@gmail.com', // Your email
+      subject: 'Test Email - MGM Museum Booking System',
       html: `
-        <div style="font-family: Arial, sans-serif; padding: 20px;">
-          <h1 style="color: #333;">Test Email</h1>
-          <p>This is a test email from MGM Museum booking system.</p>
-          <p>If you're receiving this, the Resend API is working correctly!</p>
-          <hr style="margin: 20px 0;">
-          <p style="color: #666; font-size: 12px;">
-            Sent at: ${new Date().toISOString()}<br>
-            API Key: ${process.env.RESEND_API_KEY?.substring(0, 15)}...
-          </p>
-        </div>
+        <h1>Test Email</h1>
+        <p>This is a test email to verify Resend API integration.</p>
+        <p><strong>Timestamp:</strong> ${new Date().toISOString()}</p>
+        <p>If you receive this email, the Resend API is working correctly!</p>
       `,
     });
 
     if (error) {
-      console.error('❌ Error sending email:', error);
-      return;
+      console.error('❌ FAILED to send email');
+      console.error('Error details:', {
+        message: error.message,
+        name: error.name,
+        error: error,
+      });
+      return { success: false, error };
     }
 
-    console.log('✅ Email sent successfully!');
+    console.log('✅ SUCCESS! Email sent');
     console.log('Email ID:', data?.id);
     console.log('\nCheck your inbox at: shivampaliwal37@gmail.com');
+    console.log('Also check spam folder if not in inbox');
+    
+    return { success: true, data };
   } catch (error: any) {
-    console.error('❌ Exception occurred:', error.message);
-    console.error('Full error:', error);
+    console.error('💥 EXCEPTION occurred');
+    console.error('Error:', error.message);
+    console.error('Stack:', error.stack);
+    return { success: false, error };
   }
 }
 
-testResendEmail();
+// Run test
+testResendAPI()
+  .then((result) => {
+    console.log('\n📊 Test Result:', result.success ? '✅ PASSED' : '❌ FAILED');
+    process.exit(result.success ? 0 : 1);
+  })
+  .catch((error) => {
+    console.error('Fatal error:', error);
+    process.exit(1);
+  });
