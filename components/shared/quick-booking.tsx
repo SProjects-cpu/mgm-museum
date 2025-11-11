@@ -40,12 +40,31 @@ export function QuickBooking() {
   const today = new Date().toISOString().split("T")[0];
 
   useEffect(() => {
-    // Set default config - no API call needed
+    // Set default config with all required fields
     setConfig({
+      id: "default",
       is_enabled: true,
-      title: "Quick Booking",
-      subtitle: "Book your visit in seconds",
-      button_text: "Book Now",
+      price_per_person: 50,
+      currency: "INR",
+      currency_symbol: "₹",
+      button_text: "Book Your Visit",
+      button_link: "/book-visit",
+      opening_time: "09:30 AM",
+      closing_time: "05:30 PM",
+      closed_days: ["Monday"],
+      features: [
+        "Interactive Science Exhibits",
+        "Planetarium Shows",
+        "3D Theatre Experience",
+        "Hands-on Learning Labs",
+        "Outdoor Science Park",
+        "Educational Programs"
+      ],
+      experience_types: [
+        { value: "general", label: "General Admission" },
+        { value: "planetarium", label: "Planetarium Show" },
+        { value: "combo", label: "Combo Package" }
+      ]
     });
     setLoading(false);
   }, []);
@@ -54,10 +73,16 @@ export function QuickBooking() {
     return null;
   }
 
+  // Safe array handling for features
+  const features = Array.isArray(config.features) ? config.features : [];
   const featureGroups = [];
-  for (let i = 0; i < config.features.length; i += 3) {
-    featureGroups.push(config.features.slice(i, i + 3));
+  for (let i = 0; i < features.length; i += 3) {
+    featureGroups.push(features.slice(i, i + 3));
   }
+  
+  // Safe array handling for other fields
+  const closedDays = Array.isArray(config.closed_days) ? config.closed_days : [];
+  const experienceTypes = Array.isArray(config.experience_types) ? config.experience_types : [];
 
   return (
     <section className="py-32 bg-muted/50 relative overflow-hidden">
@@ -86,8 +111,8 @@ export function QuickBooking() {
             <div className="mx-auto flex w-full flex-col rounded-lg border p-6 sm:w-fit sm:min-w-80 bg-background shadow-xl">
               {/* Pricing Display */}
               <div className="flex justify-center mb-6">
-                <span className="text-lg font-semibold">{config.currency_symbol}</span>
-                <span className="text-6xl font-semibold">{config.price_per_person}</span>
+                <span className="text-lg font-semibold">{config.currency_symbol || "₹"}</span>
+                <span className="text-6xl font-semibold">{config.price_per_person || 50}</span>
                 <span className="self-end text-muted-foreground">/person</span>
               </div>
 
@@ -128,9 +153,9 @@ export function QuickBooking() {
                     min={today}
                     className="w-full"
                   />
-                  {config.closed_days.length > 0 && (
+                  {closedDays.length > 0 && (
                     <p className="text-xs text-muted-foreground">
-                      Closed on {config.closed_days.join(', ')}
+                      Closed on {closedDays.join(', ')}
                     </p>
                   )}
                 </div>
@@ -168,7 +193,7 @@ export function QuickBooking() {
                     onChange={(e) => setExperience(e.target.value)}
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
-                    {config.experience_types.map((type) => (
+                    {experienceTypes.map((type) => (
                       <option key={type.value} value={type.value}>
                         {type.label}
                       </option>
@@ -182,17 +207,17 @@ export function QuickBooking() {
                 size="lg"
                 className="w-full gradient-primary text-lg font-semibold"
                 onClick={() => {
-                  window.location.href = config.button_link;
+                  window.location.href = config.button_link || "/book-visit";
                 }}
               >
-                {config.button_text}
+                {config.button_text || "Book Now"}
               </Button>
 
               {/* Info Text */}
               <div className="mt-6 p-4 bg-accent/10 rounded-lg">
                 <p className="text-sm text-center text-muted-foreground">
-                  <strong>Opening Hours:</strong> {config.opening_time} - {config.closing_time}
-                  {config.closed_days.length > 0 && ` (Closed ${config.closed_days.join(', ')})`}
+                  <strong>Opening Hours:</strong> {config.opening_time || "09:30 AM"} - {config.closing_time || "05:30 PM"}
+                  {closedDays.length > 0 && ` (Closed ${closedDays.join(', ')})`}
                   {" | "}
                   <Link href="/plan-visit" className="text-primary hover:underline">
                     View all details
