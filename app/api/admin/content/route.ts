@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase/server';
 // GET - Fetch all content pages
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
 
     const { data: pages, error } = await supabase
       .from('content_pages')
@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
 // POST - Create new content page
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
     const body = await request.json();
 
     const {
