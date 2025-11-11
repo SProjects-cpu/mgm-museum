@@ -136,8 +136,10 @@ export async function fetchTicketData(
     }
 
     // Construct and return complete booking data
+    // Extract time_slots from array if needed (Supabase returns arrays for joins)
+    const timeSlot = Array.isArray(booking.time_slots) ? booking.time_slots[0] : booking.time_slots;
     // Use slot_date from time_slots if available, otherwise use booking_date
-    const actualBookingDate = booking.time_slots?.slot_date || booking.booking_date;
+    const actualBookingDate = timeSlot?.slot_date || booking.booking_date;
     
     const bookingData: BookingData = {
       id: booking.id,
@@ -153,9 +155,9 @@ export async function fetchTicketData(
       show_id: booking.show_id,
       time_slot_id: booking.time_slot_id,
       created_at: booking.created_at,
-      exhibitions: booking.exhibitions as any,
-      shows: booking.shows as any,
-      time_slots: booking.time_slots as any,
+      exhibitions: Array.isArray(booking.exhibitions) ? booking.exhibitions[0] : booking.exhibitions as any,
+      shows: Array.isArray(booking.shows) ? booking.shows[0] : booking.shows as any,
+      time_slots: timeSlot as any,
       tickets: tickets || [],
       pricing_tier: pricingTier,
     };

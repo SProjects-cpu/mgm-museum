@@ -236,10 +236,15 @@ export default function CartPage() {
             ) : (
               <div className="space-y-4">
                 {confirmedBookings.map((booking) => {
-                  const eventName = booking.exhibitions?.name || booking.shows?.name || 'Museum Visit';
-                  const date = booking.time_slots?.slot_date || booking.booking_date;
-                  const time = booking.time_slots
-                    ? `${booking.time_slots.start_time} - ${booking.time_slots.end_time}`
+                  // Extract time_slots from array if needed
+                  const timeSlot = Array.isArray(booking.time_slots) ? booking.time_slots[0] : booking.time_slots;
+                  const exhibition = Array.isArray(booking.exhibitions) ? booking.exhibitions[0] : booking.exhibitions;
+                  const show = Array.isArray(booking.shows) ? booking.shows[0] : booking.shows;
+                  
+                  const eventName = exhibition?.name || show?.name || 'Museum Visit';
+                  const date = timeSlot?.slot_date || booking.booking_date;
+                  const time = timeSlot
+                    ? `${timeSlot.start_time} - ${timeSlot.end_time}`
                     : booking.booking_time || 'Time TBD';
 
                   return (

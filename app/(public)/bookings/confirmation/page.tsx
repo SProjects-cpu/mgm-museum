@@ -202,8 +202,10 @@ export default function BookingConfirmationPage() {
                   <div className="font-semibold text-muted-foreground">Date:</div>
                   <div>
                     {(() => {
+                      // Extract time_slots from array if needed
+                      const timeSlot = Array.isArray(booking.time_slots) ? booking.time_slots[0] : booking.time_slots;
                       // Priority 1: Use slot_date from time_slots (most accurate)
-                      const dateToUse = booking.time_slots?.slot_date || booking.booking_date;
+                      const dateToUse = timeSlot?.slot_date || booking.booking_date;
                       // Use date helper to format without timezone conversion
                       return formatDateForDisplay(dateToUse);
                     })()}
@@ -212,14 +214,17 @@ export default function BookingConfirmationPage() {
                   <div className="font-semibold text-muted-foreground">Time:</div>
                   <div>
                     {(() => {
+                      // Extract time_slots from array if needed
+                      const timeSlot = Array.isArray(booking.time_slots) ? booking.time_slots[0] : booking.time_slots;
+                      
                       // Priority 1: Use time_slots data if available
-                      if (booking.time_slots?.start_time && booking.time_slots?.end_time) {
-                        const startTime = new Date(`2000-01-01T${booking.time_slots.start_time}`).toLocaleTimeString('en-US', {
+                      if (timeSlot?.start_time && timeSlot?.end_time) {
+                        const startTime = new Date(`2000-01-01T${timeSlot.start_time}`).toLocaleTimeString('en-US', {
                           hour: 'numeric',
                           minute: '2-digit',
                           hour12: true,
                         });
-                        const endTime = new Date(`2000-01-01T${booking.time_slots.end_time}`).toLocaleTimeString('en-US', {
+                        const endTime = new Date(`2000-01-01T${timeSlot.end_time}`).toLocaleTimeString('en-US', {
                           hour: 'numeric',
                           minute: '2-digit',
                           hour12: true,
