@@ -23,7 +23,7 @@ export async function GET() {
       .eq('id', user.id)
       .single();
 
-    if (!profile || profile.role !== 'admin') {
+    if (!profile || (profile as any).role !== 'admin') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -39,7 +39,7 @@ export async function GET() {
       .select('*', { count: 'exact' })
       .gte('created_at', todayStart.toISOString())
       .lte('created_at', todayEnd.toISOString())
-      .eq('payment_status', 'paid');
+      .eq('payment_status', 'paid') as any;
 
     // Fetch yesterday's bookings for comparison
     const { count: yesterdayBookingsCount } = await supabase
@@ -58,18 +58,18 @@ export async function GET() {
       .select('total_amount')
       .gte('created_at', yesterdayStart.toISOString())
       .lte('created_at', yesterdayEnd.toISOString())
-      .eq('payment_status', 'paid');
+      .eq('payment_status', 'paid') as any;
 
     const yesterdayRevenue = yesterdayBookings?.reduce((sum, b) => sum + Number(b.total_amount), 0) || 0;
 
     // Fetch today's visitors (count tickets)
-    const todayBookingIds = todayBookings?.map(b => b.id) || [];
+    const todayBookingIds = todayBookings?.map((b: any) => b.id) || [];
     const { data: todayTickets } = await supabase
       .from('booking_tickets')
       .select('quantity')
-      .in('booking_id', todayBookingIds);
+      .in('booking_id', todayBookingIds) as any;
 
-    const todayVisitors = todayTickets?.reduce((sum, t) => sum + t.quantity, 0) || 0;
+    const todayVisitors = todayTickets?.reduce((sum: number, t: any) => sum + t.quantity, 0) || 0;
 
     // Fetch yesterday's visitors for comparison
     const { data: yesterdayBookingsData } = await supabase
@@ -77,15 +77,15 @@ export async function GET() {
       .select('id')
       .gte('created_at', yesterdayStart.toISOString())
       .lte('created_at', yesterdayEnd.toISOString())
-      .eq('payment_status', 'paid');
+      .eq('payment_status', 'paid') as any;
 
-    const yesterdayBookingIds = yesterdayBookingsData?.map(b => b.id) || [];
+    const yesterdayBookingIds = yesterdayBookingsData?.map((b: any) => b.id) || [];
     const { data: yesterdayTickets } = await supabase
       .from('booking_tickets')
       .select('quantity')
-      .in('booking_id', yesterdayBookingIds);
+      .in('booking_id', yesterdayBookingIds) as any;
 
-    const yesterdayVisitors = yesterdayTickets?.reduce((sum, t) => sum + t.quantity, 0) || 0;
+    const yesterdayVisitors = yesterdayTickets?.reduce((sum: number, t: any) => sum + t.quantity, 0) || 0;
 
     // Fetch active exhibitions count
     const { count: activeExhibitionsCount } = await supabase
@@ -115,7 +115,7 @@ export async function GET() {
       `)
       .eq('payment_status', 'paid')
       .order('created_at', { ascending: false })
-      .limit(5);
+      .limit(5) as any;
 
     // Fetch today's time slots with bookings
     const { data: todayTimeSlots } = await supabase
@@ -133,7 +133,7 @@ export async function GET() {
       .eq('slot_date', today.toISOString().split('T')[0])
       .eq('active', true)
       .order('start_time', { ascending: true })
-      .limit(3);
+      .limit(3) as any;
 
     // Calculate growth percentages
     const bookingsGrowth = yesterdayBookingsCount && yesterdayBookingsCount > 0
@@ -175,7 +175,7 @@ export async function GET() {
           footer: `${activeExhibitionsCount || 0} exhibitions active`,
         },
       },
-      recentBookings: recentBookings?.map(booking => ({
+      recentBookings: recentBookings?.map((booking: any) => ({
         id: booking.id,
         reference: booking.booking_reference,
         customer: booking.guest_name || booking.users?.full_name || 'Guest',
@@ -184,7 +184,7 @@ export async function GET() {
         amount: Number(booking.total_amount),
         status: booking.status,
       })) || [],
-      todayShows: todayTimeSlots?.map(slot => ({
+      todayShows: todayTimeSlots?.map((slot: any) => ({
         name: slot.exhibitions?.name || 'Unknown',
         time: slot.start_time.substring(0, 5), // HH:MM
         capacity: slot.capacity,
