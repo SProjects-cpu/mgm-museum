@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
       showId,
       tickets,
       totalTickets,
+      subtotal,
     } = body;
 
     // Validate required fields
@@ -166,7 +167,7 @@ export async function POST(request: NextRequest) {
       student_tickets: tickets.student || 0,
       senior_tickets: tickets.senior || 0,
       total_tickets: totalTickets,
-      subtotal: 0, // Will be calculated with pricing
+      subtotal: subtotal || 0,
       expires_at: expiresAt.toISOString(),
     };
 

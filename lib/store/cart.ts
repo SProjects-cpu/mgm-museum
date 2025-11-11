@@ -83,6 +83,7 @@ export const useCartStore = create<CartStore>()(
                 showId: item.showId,
                 tickets: item.tickets,
                 totalTickets: item.totalTickets,
+                subtotal: item.subtotal,
               }),
             });
 
