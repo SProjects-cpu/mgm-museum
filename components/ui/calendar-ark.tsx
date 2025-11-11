@@ -18,12 +18,10 @@ export default function ArkCalendar({
 }: ArkCalendarProps) {
   const handleValueChange = (details: any) => {
     if (details.value && details.value[0] && onDateSelect) {
-      // Convert Ark UI date to JavaScript Date
+      // Convert Ark UI date to JavaScript Date using UTC to prevent timezone shifts
       const selectedValue = details.value[0];
       const jsDate = new Date(
-        selectedValue.year,
-        selectedValue.month - 1,
-        selectedValue.day
+        Date.UTC(selectedValue.year, selectedValue.month - 1, selectedValue.day)
       );
       onDateSelect(jsDate);
     }
@@ -38,10 +36,10 @@ export default function ArkCalendar({
   const isDateDisabled = (date: any) => {
     if (!date) return true;
     
-    // Check if date is in the past
+    // Check if date is in the past - use UTC to prevent timezone issues
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const checkDate = new Date(date.year, date.month - 1, date.day);
+    today.setUTCHours(0, 0, 0, 0);
+    const checkDate = new Date(Date.UTC(date.year, date.month - 1, date.day));
     
     if (checkDate < today) return true;
     if (minDate && checkDate < minDate) return true;
