@@ -200,7 +200,7 @@ export default function VerifyTicketPage() {
               <div className="flex justify-between items-center">
                 <span className="text-gray-200 font-medium">Amount Paid</span>
                 <span className="text-2xl font-bold text-green-400">
-                  ₹{Math.round(booking.amount_paid / 100)}
+                  ₹{Math.round(Number(booking.amount_paid))}
                 </span>
               </div>
               <div className="flex justify-between items-center text-sm">
