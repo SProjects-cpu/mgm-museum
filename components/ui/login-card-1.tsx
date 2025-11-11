@@ -38,6 +38,11 @@ export default function LoginCard() {
       // If we get here, redirect was successful
       toast.success('Login successful!');
     } catch (err: any) {
+      // Ignore NEXT_REDIRECT errors - they're expected for successful redirects
+      if (err.message?.includes('NEXT_REDIRECT')) {
+        return;
+      }
+      
       console.error('Login error:', err);
       setError(err.message || 'Invalid email or password. Please try again.');
       setLoading(false);
