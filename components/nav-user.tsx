@@ -45,9 +45,28 @@ export function NavUser({
   const router = useRouter()
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    toast.success("Logged out successfully");
-    router.push('/admin/login');
+    try {
+      // Call server-side logout API
+      const response = await fetch('/api/auth/logout', {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        throw new Error('Logout failed');
+      }
+
+      // Also sign out from client
+      await supabase.auth.signOut();
+      
+      toast.success("Logged out successfully");
+      
+      // Redirect to login page
+      router.push('/admin/login');
+      router.refresh();
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast.error("Failed to logout");
+    }
   };
 
   return (
