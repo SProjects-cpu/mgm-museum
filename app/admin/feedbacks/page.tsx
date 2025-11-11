@@ -12,7 +12,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { MessageSquare, Search, Star, ChevronLeft, ChevronRight } from 'lucide-react';
-import { supabase } from '@/lib/supabase/config';
 import { toast } from 'sonner';
 import BlockLoader from '@/components/ui/block-loader';
 
@@ -49,31 +48,12 @@ export default function AdminFeedbacksPage() {
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
-    // Check if user is logged in before fetching
-    const checkAuthAndFetch = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        console.error('No active session detected');
-        toast.error('Please log in to access admin panel');
-        setLoading(false);
-        return;
-      }
-      fetchFeedbacks();
-    };
-    
-    checkAuthAndFetch();
+    fetchFeedbacks();
   }, [pagination.page, ratingFilter, eventTypeFilter]);
 
   const fetchFeedbacks = async () => {
     setLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        console.error('No session found - user needs to log in');
-        toast.error('Session expired. Please log in again');
-        return;
-      }
-
       const params = new URLSearchParams({
         page: pagination.page.toString(),
         limit: pagination.limit.toString(),
@@ -83,11 +63,7 @@ export default function AdminFeedbacksPage() {
       if (eventTypeFilter && eventTypeFilter !== 'all') params.append('event_type', eventTypeFilter);
       if (searchQuery) params.append('search', searchQuery);
 
-      const response = await fetch(`/api/admin/feedbacks?${params}`, {
-        headers: {
-          'Authorization': `Bearer ${session.access_token}`,
-        },
-      });
+      const response = await fetch(`/api/admin/feedbacks?${params}`);
 
       const data = await response.json();
 

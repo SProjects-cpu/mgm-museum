@@ -32,7 +32,7 @@ import { EXHIBITION_CATEGORY_LABELS } from "@/types";
 import { ExhibitionContentManager } from "@/components/admin/exhibition-content-manager";
 import { TimeSlotsManager } from "@/components/admin/time-slots-manager";
 import { PricingManagerWrapper } from "@/components/admin/pricing-manager-wrapper";
-import { ScheduleManager } from "@/components/admin/schedule-manager";
+
 import { ImageUploadZone } from "@/components/admin/image-upload-zone";
 
 interface Props {
@@ -173,12 +173,11 @@ export function ExhibitionDetailManagement({ exhibitionId }: Props) {
 
       {/* Tabs */}
       <Tabs defaultValue="basic" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="basic">Basic Info</TabsTrigger>
           <TabsTrigger value="content">Content</TabsTrigger>
           <TabsTrigger value="timeslots">Time Slots</TabsTrigger>
           <TabsTrigger value="pricing">Pricing</TabsTrigger>
-          <TabsTrigger value="schedule">Schedule</TabsTrigger>
         </TabsList>
 
         {/* Basic Information Tab */}
@@ -394,10 +393,7 @@ export function ExhibitionDetailManagement({ exhibitionId }: Props) {
           <PricingManagerWrapper exhibitionId={exhibitionId} />
         </TabsContent>
 
-        {/* Schedule Tab */}
-        <TabsContent value="schedule">
-          <ScheduleManager exhibitionId={exhibitionId} />
-        </TabsContent>
+
       </Tabs>
     </div>
   );

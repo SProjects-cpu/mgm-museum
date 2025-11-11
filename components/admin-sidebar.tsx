@@ -68,11 +68,7 @@ const adminData = {
       url: "/admin/pricing",
       icon: DollarSign,
     },
-    {
-      title: "Users",
-      url: "/admin/users",
-      icon: Users,
-    },
+
     {
       title: "Content",
       url: "/admin/content",
