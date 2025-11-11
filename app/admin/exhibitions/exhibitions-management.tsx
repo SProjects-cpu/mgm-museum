@@ -65,14 +65,27 @@ export function ExhibitionsManagement() {
     }
   };
 
-  const handleDeleteExhibition = (id: string) => {
-    if (confirm("Are you sure you want to delete this exhibition?")) {
-      try {
-        deleteExhibition(id);
-        toast.success("Exhibition deleted successfully");
-      } catch (error) {
-        toast.error("Failed to delete exhibition");
+  const handleDeleteExhibition = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this exhibition? This action cannot be undone.")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/admin/exhibitions/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to delete exhibition");
       }
+
+      // Update local state after successful API call
+      deleteExhibition(id);
+      toast.success("Exhibition deleted successfully");
+    } catch (error: any) {
+      console.error("Error deleting exhibition:", error);
+      toast.error(error.message || "Failed to delete exhibition");
     }
   };
 

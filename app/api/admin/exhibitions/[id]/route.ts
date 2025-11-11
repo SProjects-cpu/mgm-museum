@@ -121,13 +121,61 @@ export async function DELETE(
 
     const { id } = await params;
 
-    // Delete related pricing first
+    // Check if exhibition has bookings
+    const { data: bookings, error: bookingsError } = await supabase
+      .from('bookings')
+      .select('id')
+      .eq('exhibition_id', id)
+      .limit(1);
+
+    if (bookingsError) {
+      console.error('Error checking bookings:', bookingsError);
+      return NextResponse.json(
+        { error: 'Failed to check bookings', details: bookingsError.message },
+        { status: 500 }
+      );
+    }
+
+    if (bookings && bookings.length > 0) {
+      return NextResponse.json(
+        { error: 'Cannot delete exhibition with existing bookings. Please cancel all bookings first.' },
+        { status: 400 }
+      );
+    }
+
+    // Delete related data in order (respecting foreign key constraints)
+    
+    // 1. Delete cart items
+    await supabase
+      .from('cart_items')
+      .delete()
+      .eq('exhibition_id', id);
+
+    // 2. Delete exhibition content sections
+    await supabase
+      .from('exhibition_content_sections')
+      .delete()
+      .eq('exhibition_id', id);
+
+    // 3. Delete exhibition schedules
+    await supabase
+      .from('exhibition_schedules')
+      .delete()
+      .eq('exhibition_id', id);
+
+    // 4. Delete time slots (only those without bookings)
+    await supabase
+      .from('time_slots')
+      .delete()
+      .eq('exhibition_id', id);
+
+    // 5. Delete pricing
     await supabase
       .from('pricing')
       .delete()
       .eq('exhibition_id', id);
 
-    // Delete the exhibition
+    // 6. Finally, delete the exhibition
     const { error } = await supabase
       .from('exhibitions')
       .delete()
