@@ -2,7 +2,7 @@ import MuseumHero from "@/components/shared/museum-hero";
 import { QuickBooking } from "@/components/shared/quick-booking";
 import { FeaturedExhibitions } from "@/components/shared/featured-exhibitions";
 import { StatsCounter } from "@/components/shared/stats-counter";
-import { Testimonials } from "@/components/shared/testimonials";
+// import { Testimonials } from "@/components/shared/testimonials";
 import { StructuredData } from "@/components/shared/structured-data";
 import type { Metadata } from "next";
 
@@ -21,7 +21,7 @@ export default function HomePage() {
         <QuickBooking />
         <FeaturedExhibitions />
         <StatsCounter />
-        <Testimonials />
+        {/* <Testimonials /> */}
       </div>
     </>
   );
