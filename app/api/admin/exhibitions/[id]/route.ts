@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, createServiceClient } from '@/lib/supabase/server';
 import { verifyAdminAuth } from '@/lib/auth/admin-auth';
 
 type Params = Promise<{ id: string }>;
@@ -121,12 +121,15 @@ export async function DELETE(
 
     const { id } = await params;
 
+    // Use service role to check bookings (bypass RLS)
+    const serviceSupabase = createServiceClient();
+    
     // Check if exhibition has bookings
-    const { data: bookings, error: bookingsError } = await supabase
+    const { data: bookings, error: bookingsError } = await serviceSupabase
       .from('bookings')
-      .select('id')
+      .select('id, booking_reference')
       .eq('exhibition_id', id)
-      .limit(1);
+      .limit(5); // Get up to 5 to show in error message
 
     console.log(`[DELETE Exhibition] Checking bookings for exhibition ${id}`);
     console.log(`[DELETE Exhibition] Bookings found: ${bookings?.length || 0}`);
@@ -141,9 +144,14 @@ export async function DELETE(
     }
 
     if (bookings && bookings.length > 0) {
-      console.log(`[DELETE Exhibition] Cannot delete - has ${bookings.length} bookings`);
+      const bookingRefs = bookings.map(b => b.booking_reference).join(', ');
+      console.log(`[DELETE Exhibition] Cannot delete - has ${bookings.length} bookings: ${bookingRefs}`);
       return NextResponse.json(
-        { error: `Cannot delete exhibition with existing bookings (${bookings.length} found). Please cancel all bookings first.` },
+        { 
+          error: `Cannot delete exhibition with existing bookings. Found ${bookings.length} booking(s): ${bookingRefs}. Please cancel all bookings first.`,
+          bookingCount: bookings.length,
+          bookingReferences: bookings.map(b => b.booking_reference)
+        },
         { status: 400 }
       );
     }
