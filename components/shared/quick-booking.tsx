@@ -40,22 +40,15 @@ export function QuickBooking() {
   const today = new Date().toISOString().split("T")[0];
 
   useEffect(() => {
-    fetchConfig();
+    // Set default config - no API call needed
+    setConfig({
+      is_enabled: true,
+      title: "Quick Booking",
+      subtitle: "Book your visit in seconds",
+      button_text: "Book Now",
+    });
+    setLoading(false);
   }, []);
-
-  const fetchConfig = async () => {
-    try {
-      const response = await fetch('/api/ticket-showcase');
-      const data = await response.json();
-      if (data.success) {
-        setConfig(data.config);
-      }
-    } catch (error) {
-      console.error('Error fetching ticket showcase config:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (loading || !config || !config.is_enabled) {
     return null;

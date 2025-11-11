@@ -44,10 +44,19 @@ export function FeedbackDialog({
     setIsSubmitting(true);
 
     try {
+      // Get user session for authentication
+      const { supabase } = await import("@/lib/supabase/config");
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session) {
+        throw new Error("Please login to submit feedback");
+      }
+
       const response = await fetch("/api/feedback/create", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
           booking_id: bookingId,
