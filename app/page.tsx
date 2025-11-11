@@ -1,6 +1,6 @@
 import MuseumHero from "@/components/shared/museum-hero";
 import { QuickBooking } from "@/components/shared/quick-booking";
-import { FeaturedExhibitions } from "@/components/shared/featured-exhibitions";
+// import { FeaturedExhibitions } from "@/components/shared/featured-exhibitions";
 import { StatsCounter } from "@/components/shared/stats-counter";
 // import { Testimonials } from "@/components/shared/testimonials";
 import { StructuredData } from "@/components/shared/structured-data";
@@ -19,7 +19,7 @@ export default function HomePage() {
       <div className="min-h-screen">
         <MuseumHero />
         <QuickBooking />
-        <FeaturedExhibitions />
+        {/* <FeaturedExhibitions /> */}
         <StatsCounter />
         {/* <Testimonials /> */}
       </div>
