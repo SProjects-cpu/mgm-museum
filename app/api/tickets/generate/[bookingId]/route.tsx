@@ -254,10 +254,13 @@ export async function GET(
       );
     }
 
-    // 10. Generate QR code
+    // 10. Generate QR code with verification URL
     let qrCodeDataUrl;
     try {
-      qrCodeDataUrl = await generateQRCode(bookingData.booking_reference, {
+      // Create verification URL that shows all booking details when scanned
+      const verificationUrl = `${process.env.NEXT_PUBLIC_SITE_URL || 'https://mgm-museum.vercel.app'}/verify/${bookingData.booking_reference}`;
+      
+      qrCodeDataUrl = await generateQRCode(verificationUrl, {
         width: 200,
         margin: 2,
         errorCorrectionLevel: 'M',
