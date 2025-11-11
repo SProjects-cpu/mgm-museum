@@ -15,9 +15,13 @@ interface TestimonialsSectionProps {
 export function TestimonialsSection({ 
   title,
   description,
-  testimonials,
+  testimonials = [],
   className 
 }: TestimonialsSectionProps) {
+  // Safety check
+  if (!Array.isArray(testimonials) || testimonials.length === 0) {
+    return null;
+  }
   return (
     <section className={cn(
       "bg-background text-foreground",

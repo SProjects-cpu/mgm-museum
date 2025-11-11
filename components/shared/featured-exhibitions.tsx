@@ -31,6 +31,7 @@ export function FeaturedExhibitions() {
   
   const [exhibitions, setExhibitions] = useState<Exhibition[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
     fetchExhibitions();
@@ -47,11 +48,14 @@ export function FeaturedExhibitions() {
         .order('display_order')
         .limit(4);
 
-      if (!error && data) {
+      if (!error && data && Array.isArray(data)) {
         setExhibitions(data);
+      } else {
+        setError(true);
       }
     } catch (error) {
       console.error('Error fetching exhibitions:', error);
+      setError(true);
     } finally {
       setLoading(false);
     }
@@ -90,7 +94,7 @@ export function FeaturedExhibitions() {
           <div className="col-span-full text-center py-12">
             <p className="text-muted-foreground">Loading exhibitions...</p>
           </div>
-        ) : exhibitions.length === 0 ? null : (
+        ) : error || !Array.isArray(exhibitions) || exhibitions.length === 0 ? null : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {exhibitions.map((exhibition, index) => (
               <motion.div
