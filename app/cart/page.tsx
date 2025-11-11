@@ -73,14 +73,18 @@ export default function CartPage() {
       const data = await response.json();
 
       if (data.success) {
-        setPendingItems(data.pending || []);
-        setConfirmedBookings(data.confirmed || []);
+        setPendingItems(Array.isArray(data.pending) ? data.pending : []);
+        setConfirmedBookings(Array.isArray(data.confirmed) ? data.confirmed : []);
       } else {
         toast.error('Failed to load cart data');
+        setPendingItems([]);
+        setConfirmedBookings([]);
       }
     } catch (error) {
       console.error('Error fetching cart data:', error);
       toast.error('Failed to load cart data');
+      setPendingItems([]);
+      setConfirmedBookings([]);
     } finally {
       setLoading(false);
     }

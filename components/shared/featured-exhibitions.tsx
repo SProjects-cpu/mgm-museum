@@ -104,7 +104,11 @@ export function FeaturedExhibitions() {
                 <Card className="group overflow-hidden h-full flex flex-col border-0 bg-card/50 backdrop-blur-sm hover:shadow-2xl hover:shadow-primary/20 transition-all duration-500 hover:-translate-y-2">
                   <div className="relative h-56 overflow-hidden">
                     <img
-                      src={exhibition.images?.[0] || "https://images.unsplash.com/photo-1502134249126-9f3755a50d78?w=800&q=80"}
+                      src={
+                        (Array.isArray(exhibition.images) && exhibition.images.length > 0)
+                          ? exhibition.images[0]
+                          : "https://images.unsplash.com/photo-1502134249126-9f3755a50d78?w=800&q=80"
+                      }
                       alt={exhibition.name}
                       className="w-full h-full object-cover group-hover:scale-110 group-hover:rotate-2 transition-all duration-700"
                     />
