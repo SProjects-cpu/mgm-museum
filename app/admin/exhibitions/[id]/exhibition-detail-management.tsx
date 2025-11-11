@@ -30,7 +30,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { EXHIBITION_CATEGORY_LABELS } from "@/types";
 import { ExhibitionContentManager } from "@/components/admin/exhibition-content-manager";
-import { TimeSlotsManager } from "@/components/admin/time-slots-manager";
+import { DateSpecificTimeSlotsManager } from "@/components/admin/date-specific-time-slots-manager";
 import { PricingManagerWrapper } from "@/components/admin/pricing-manager-wrapper";
 
 import { ImageUploadZone } from "@/components/admin/image-upload-zone";
@@ -385,7 +385,7 @@ export function ExhibitionDetailManagement({ exhibitionId }: Props) {
 
         {/* Time Slots Tab */}
         <TabsContent value="timeslots">
-          <TimeSlotsManager exhibitionId={exhibitionId} />
+          <DateSpecificTimeSlotsManager exhibitionId={exhibitionId} />
         </TabsContent>
 
         {/* Pricing Tab */}
