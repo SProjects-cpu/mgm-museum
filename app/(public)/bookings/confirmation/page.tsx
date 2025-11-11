@@ -257,7 +257,7 @@ export default function BookingConfirmationPage() {
                   <div className="text-green-600 font-semibold uppercase">{booking.status}</div>
                   
                   <div className="font-semibold text-muted-foreground">Amount Paid:</div>
-                  <div className="font-bold text-lg">₹{Number(booking.total_amount).toFixed(2)}</div>
+                  <div className="font-bold text-lg">₹{Math.round(Number(booking.total_amount))}</div>
                 </div>
 
                 {/* Download Button */}

@@ -198,20 +198,20 @@ export default function VerifyTicketPage() {
             {/* Payment Info */}
             <div className="bg-gray-800/50 rounded-lg p-4 space-y-2">
               <div className="flex justify-between items-center">
-                <span className="text-gray-400">Amount Paid</span>
+                <span className="text-gray-200 font-medium">Amount Paid</span>
                 <span className="text-2xl font-bold text-green-400">
-                  ₹{(booking.amount_paid / 100).toFixed(2)}
+                  ₹{Math.round(booking.amount_paid / 100)}
                 </span>
               </div>
               <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-400">Status</span>
+                <span className="text-gray-200 font-medium">Status</span>
                 <span className={`font-semibold ${isConfirmed ? 'text-green-400' : 'text-yellow-400'}`}>
                   {booking.status.toUpperCase()}
                 </span>
               </div>
               <div className="flex justify-between items-center text-sm">
-                <span className="text-gray-400">Booked On</span>
-                <span className="text-gray-300">{booking.booking_timestamp}</span>
+                <span className="text-gray-200 font-medium">Booked On</span>
+                <span className="text-gray-100">{booking.booking_timestamp}</span>
               </div>
             </div>
           </CardContent>

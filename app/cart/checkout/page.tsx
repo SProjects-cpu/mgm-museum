@@ -535,7 +535,7 @@ export default function CheckoutPage() {
                     ) : (
                       <>
                         <CreditCard className="w-4 h-4 mr-2" />
-                        {totalAmount === 0 ? 'Confirm Booking' : `Pay ₹${totalAmount.toFixed(2)}`}
+                        {totalAmount === 0 ? 'Confirm Booking' : `Pay ₹${Math.round(totalAmount)}`}
                       </>
                     )}
                   </Button>
@@ -566,7 +566,7 @@ export default function CheckoutPage() {
                 <div className="flex justify-between">
                   <span className="font-bold">Total</span>
                   <span className="font-bold text-primary">
-                    ₹{totalAmount.toFixed(2)}
+                    ₹{Math.round(totalAmount)}
                   </span>
                 </div>
 

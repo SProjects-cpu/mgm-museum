@@ -385,7 +385,7 @@ export default function BookVisitPage() {
           </Button>
 
           <div className="text-lg font-bold">
-            {totalAmount > 0 && `Total: ₹${totalAmount}`}
+            {totalAmount > 0 && `Total: ₹${Math.round(totalAmount)}`}
           </div>
 
           <Button

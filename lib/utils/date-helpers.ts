@@ -16,12 +16,15 @@ export function formatDateOnly(date: Date | string): string {
     if (/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       return date;
     }
+    // Parse string date without timezone conversion
     date = new Date(date);
   }
   
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
+  // CRITICAL: Use UTC methods to prevent timezone conversion
+  // This prevents the off-by-one day bug when dates cross timezone boundaries
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
   
   return `${year}-${month}-${day}`;
 }
@@ -29,11 +32,13 @@ export function formatDateOnly(date: Date | string): string {
 /**
  * Parse date string without timezone conversion
  * @param dateString - Date string in YYYY-MM-DD format
- * @returns Date object in local timezone
+ * @returns Date object in UTC to prevent timezone issues
  */
 export function parseDateOnly(dateString: string): Date {
   const [year, month, day] = dateString.split('-').map(Number);
-  return new Date(year, month - 1, day);
+  // CRITICAL: Use Date.UTC to create date in UTC timezone
+  // This prevents off-by-one day bugs when displaying dates
+  return new Date(Date.UTC(year, month - 1, day));
 }
 
 /**
