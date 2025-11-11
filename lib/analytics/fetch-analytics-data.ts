@@ -20,6 +20,10 @@ export interface AnalyticsData {
     bookings: number;
     revenue: number;
   }>;
+  popularTimeSlots: Array<{
+    time: string;
+    bookings: number;
+  }>;
 }
 
 export async function fetchAnalyticsData(
@@ -151,6 +155,35 @@ export async function fetchAnalyticsData(
     .sort((a, b) => b.revenue - a.revenue)
     .slice(0, 10);
 
+  // Fetch popular time slots
+  const { data: timeSlotBookings } = await supabase
+    .from('bookings')
+    .select(`
+      time_slot_id,
+      time_slots:time_slot_id (
+        start_time,
+        end_time
+      )
+    `)
+    .gte('booking_date', startDateStr)
+    .lte('booking_date', endDateStr)
+    .eq('payment_status', 'paid')
+    .not('time_slot_id', 'is', null);
+
+  // Count bookings per time slot
+  const timeSlotMap = new Map<string, number>();
+  timeSlotBookings?.forEach(booking => {
+    if (booking.time_slots) {
+      const startTime = booking.time_slots.start_time.substring(0, 5); // Get HH:MM
+      timeSlotMap.set(startTime, (timeSlotMap.get(startTime) || 0) + 1);
+    }
+  });
+
+  const popularTimeSlots = Array.from(timeSlotMap.entries())
+    .map(([time, bookings]) => ({ time, bookings }))
+    .sort((a, b) => b.bookings - a.bookings)
+    .slice(0, 6);
+
   return {
     revenue: {
       total: totalRevenue,
@@ -166,5 +199,6 @@ export async function fetchAnalyticsData(
       byExhibition: visitorsByExhibition,
     },
     topExhibitions,
+    popularTimeSlots,
   };
 }

@@ -244,27 +244,8 @@ export function AnalyticsDashboard() {
       
       setMonthlyTrends(trends);
       
-      // Process time slots (extract from booking times)
-      const timeSlotsMap = new Map<string, number>();
-      
-      // Fetch booking times
-      const bookingsResponse = await fetch('/api/admin/bookings?limit=1000');
-      if (bookingsResponse.ok) {
-        const bookingsData = await bookingsResponse.json();
-        bookingsData.bookings?.forEach((booking: any) => {
-          if (booking.time_slot) {
-            const time = booking.time_slot.substring(0, 5); // Get HH:MM
-            timeSlotsMap.set(time, (timeSlotsMap.get(time) || 0) + 1);
-          }
-        });
-      }
-      
-      const timeSlots = Array.from(timeSlotsMap.entries())
-        .map(([time, bookings]) => ({ time, bookings }))
-        .sort((a, b) => b.bookings - a.bookings)
-        .slice(0, 6);
-      
-      setPopularTimeSlots(timeSlots);
+      // Set popular time slots from API response
+      setPopularTimeSlots(data.popularTimeSlots || []);
       
     } catch (error) {
       console.error('Analytics error:', error);
