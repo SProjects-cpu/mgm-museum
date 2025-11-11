@@ -9,52 +9,49 @@ import { ArrowRight, Eye, Plus, Calendar, Sparkle } from "lucide-react";
 import Link from "next/link";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
-const recentBookings = [
-  {
-    id: "1",
-    reference: "MGM-20250115-ABC1",
-    customer: "Rajesh Kumar",
-    exhibition: "Full Dome Planetarium",
-    date: "2025-01-25",
-    amount: 260,
-    status: "confirmed" as const,
-  },
-  {
-    id: "2",
-    reference: "MGM-20250115-XYZ2",
-    customer: "Priya Sharma",
-    exhibition: "Astro Gallery",
-    date: "2025-01-26",
-    amount: 180,
-    status: "pending" as const,
-  },
-  {
-    id: "3",
-    reference: "MGM-20250115-DEF3",
-    customer: "Amit Patel",
-    exhibition: "3D Theatre",
-    date: "2025-01-25",
-    amount: 150,
-    status: "confirmed" as const,
-  },
-  {
-    id: "4",
-    reference: "MGM-20250115-GHI4",
-    customer: "Sneha Desai",
-    exhibition: "Holography",
-    date: "2025-01-27",
-    amount: 90,
-    status: "confirmed" as const,
-  },
-];
+import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react";
 
-const upcomingShows = [
-  { name: "Cosmos Journey", time: "10:00 AM", capacity: 100, booked: 87 },
-  { name: "Solar System", time: "1:00 PM", capacity: 100, booked: 65 },
-  { name: "Ocean Depths 3D", time: "4:00 PM", capacity: 80, booked: 72 },
-];
+interface Booking {
+  id: string;
+  reference: string;
+  customer: string;
+  exhibition: string;
+  date: string;
+  amount: number;
+  status: "confirmed" | "pending" | "cancelled";
+}
+
+interface Show {
+  name: string;
+  time: string;
+  capacity: number;
+  booked: number;
+}
 
 export function AdminDashboard() {
+  const [recentBookings, setRecentBookings] = useState<Booking[]>([]);
+  const [todayShows, setTodayShows] = useState<Show[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, []);
+
+  const fetchDashboardData = async () => {
+    try {
+      const response = await fetch('/api/admin/dashboard');
+      if (!response.ok) throw new Error('Failed to fetch dashboard data');
+      
+      const data = await response.json();
+      setRecentBookings(data.recentBookings || []);
+      setTodayShows(data.todayShows || []);
+    } catch (error) {
+      console.error('Failed to fetch dashboard data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
   return (
     <div className="space-y-6">
       {/* Hero Section */}
@@ -129,8 +126,17 @@ export function AdminDashboard() {
             </Button>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {recentBookings.map((booking) => (
+            {loading ? (
+              <div className="flex items-center justify-center h-40">
+                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : recentBookings.length === 0 ? (
+              <div className="flex items-center justify-center h-40 text-muted-foreground">
+                No recent bookings
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recentBookings.map((booking) => (
                 <div
                   key={booking.id}
                   className="flex items-center justify-between p-4 rounded-xl bg-muted/50 hover:bg-muted transition-all duration-300 border border-transparent hover:border-primary/20"
@@ -166,7 +172,8 @@ export function AdminDashboard() {
                   </div>
                 </div>
               ))}
-            </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -205,8 +212,17 @@ export function AdminDashboard() {
               <CardTitle className="text-lg font-bold">Today's Shows</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {upcomingShows.map((show, index) => (
+              {loading ? (
+                <div className="flex items-center justify-center h-40">
+                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : todayShows.length === 0 ? (
+                <div className="flex items-center justify-center h-40 text-muted-foreground">
+                  No shows scheduled today
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {todayShows.map((show, index) => (
                   <div key={index}>
                     <div className="flex items-center justify-between mb-2">
                       <div>
@@ -230,7 +246,8 @@ export function AdminDashboard() {
                     </div>
                   </div>
                 ))}
-              </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

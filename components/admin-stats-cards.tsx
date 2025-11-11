@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { TrendingUpIcon, TrendingDownIcon, Users, Ticket, DollarSign, Calendar } from "lucide-react";
+import { TrendingUpIcon, TrendingDownIcon, Users, Ticket, DollarSign, Calendar, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -11,63 +11,90 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
-import { useWebSocketContext } from "@/lib/contexts/websocket-context";
 
-const initialStats = [
-  {
-    title: "Today's Bookings",
-    value: "24",
-    change: "+12%",
-    trending: "up" as const,
-    icon: Ticket,
-    description: "Trending up this week",
-    footer: "12 more than yesterday",
-  },
-  {
-    title: "Revenue (Today)",
-    value: formatCurrency(15680),
-    change: "+8%",
-    trending: "up" as const,
-    icon: DollarSign,
-    description: "Strong performance",
-    footer: "Above daily target",
-  },
-  {
-    title: "Total Visitors",
-    value: "1,234",
-    change: "+5%",
-    trending: "up" as const,
-    icon: Users,
-    description: "Steady growth",
-    footer: "234 visitors today",
-  },
-  {
-    title: "Active Shows",
-    value: "8",
-    change: "-2%",
-    trending: "down" as const,
-    icon: Calendar,
-    description: "Slightly down",
-    footer: "2 shows in maintenance",
-  },
-];
+interface StatData {
+  title: string;
+  value: string;
+  change: string;
+  trending: "up" | "down";
+  icon: any;
+  description: string;
+  footer: string;
+}
 
 export function AdminStatsCards() {
-  const { lastMessage } = useWebSocketContext();
-  const [stats, setStats] = useState(initialStats);
+  const [stats, setStats] = useState<StatData[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Update stats based on real-time messages
   useEffect(() => {
-    if (lastMessage?.type === "booking") {
-      setStats((prev) =>
-        prev.map((stat) =>
-          stat.title === "Today's Bookings"
-            ? { ...stat, value: String(parseInt(stat.value) + 1) }
-            : stat
-        )
-      );
+    fetchDashboardStats();
+  }, []);
+
+  const fetchDashboardStats = async () => {
+    try {
+      const response = await fetch('/api/admin/dashboard');
+      if (!response.ok) throw new Error('Failed to fetch stats');
+      
+      const data = await response.json();
+      
+      const statsData: StatData[] = [
+        {
+          title: "Today's Bookings",
+          value: String(data.stats.todayBookings.value),
+          change: `${data.stats.todayBookings.change >= 0 ? '+' : ''}${data.stats.todayBookings.change}%`,
+          trending: data.stats.todayBookings.trending,
+          icon: Ticket,
+          description: data.stats.todayBookings.trending === 'up' ? 'Trending up today' : 'Trending down today',
+          footer: data.stats.todayBookings.footer,
+        },
+        {
+          title: "Revenue (Today)",
+          value: formatCurrency(data.stats.todayRevenue.value),
+          change: `${data.stats.todayRevenue.change >= 0 ? '+' : ''}${data.stats.todayRevenue.change}%`,
+          trending: data.stats.todayRevenue.trending,
+          icon: DollarSign,
+          description: data.stats.todayRevenue.trending === 'up' ? 'Strong performance' : 'Below target',
+          footer: data.stats.todayRevenue.footer,
+        },
+        {
+          title: "Total Visitors",
+          value: String(data.stats.totalVisitors.value),
+          change: `${data.stats.totalVisitors.change >= 0 ? '+' : ''}${data.stats.totalVisitors.change}%`,
+          trending: data.stats.totalVisitors.trending,
+          icon: Users,
+          description: data.stats.totalVisitors.trending === 'up' ? 'Steady growth' : 'Slight decline',
+          footer: data.stats.totalVisitors.footer,
+        },
+        {
+          title: "Active Exhibitions",
+          value: String(data.stats.activeExhibitions.value),
+          change: `${data.stats.activeExhibitions.change >= 0 ? '+' : ''}${data.stats.activeExhibitions.change}%`,
+          trending: data.stats.activeExhibitions.trending,
+          icon: Calendar,
+          description: 'Currently active',
+          footer: data.stats.activeExhibitions.footer,
+        },
+      ];
+      
+      setStats(statsData);
+    } catch (error) {
+      console.error('Failed to fetch dashboard stats:', error);
+    } finally {
+      setLoading(false);
     }
-  }, [lastMessage]);
+  };
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {[1, 2, 3, 4].map((i) => (
+          <Card key={i} className="flex items-center justify-center h-40">
+            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          </Card>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
