@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -65,9 +65,11 @@ export function TicketTypeSelector({
     }
   };
 
-  useState(() => {
+  // Fetch ticket types on mount and when dependencies change
+  useEffect(() => {
     fetchTicketTypes();
-  });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [exhibitionId, date, timeSlotId]);
 
   const updateQuantity = (type: string, delta: number) => {
     const newQuantities = { ...quantities };
