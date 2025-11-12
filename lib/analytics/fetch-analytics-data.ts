@@ -53,7 +53,7 @@ export async function fetchAnalyticsData(
     `)
     .gte('booking_date', startDateStr)
     .lte('booking_date', endDateStr)
-    .eq('payment_status', 'paid');
+    .eq('payment_status', 'paid') as any;
 
   if (bookingsError) {
     console.error('[Analytics] Error fetching bookings:', bookingsError);
@@ -61,24 +61,24 @@ export async function fetchAnalyticsData(
   }
 
   // Get ticket counts for each booking
-  const bookingIds = bookings?.map(b => b.id) || [];
+  const bookingIds = bookings?.map((b: any) => b.id) || [];
   const { data: ticketCounts } = await supabase
     .from('booking_tickets')
     .select('booking_id, quantity')
-    .in('booking_id', bookingIds);
+    .in('booking_id', bookingIds) as any;
 
   const ticketCountMap = new Map<string, number>();
-  ticketCounts?.forEach(tc => {
+  ticketCounts?.forEach((tc: any) => {
     const current = ticketCountMap.get(tc.booking_id) || 0;
     ticketCountMap.set(tc.booking_id, current + tc.quantity);
   });
 
   // Calculate revenue
-  const totalRevenue = bookings?.reduce((sum, b) => sum + Number(b.total_amount), 0) || 0;
+  const totalRevenue = bookings?.reduce((sum: number, b: any) => sum + Number(b.total_amount), 0) || 0;
 
   // Revenue by date
   const revenueByDateMap = new Map<string, number>();
-  bookings?.forEach(b => {
+  bookings?.forEach((b: any) => {
     const date = b.booking_date;
     const current = revenueByDateMap.get(date) || 0;
     revenueByDateMap.set(date, current + Number(b.total_amount));
@@ -90,13 +90,13 @@ export async function fetchAnalyticsData(
 
   // Bookings by status
   const bookingsByStatus: Record<string, number> = {};
-  bookings?.forEach(b => {
+  bookings?.forEach((b: any) => {
     bookingsByStatus[b.status] = (bookingsByStatus[b.status] || 0) + 1;
   });
 
   // Bookings by date
   const bookingsByDateMap = new Map<string, number>();
-  bookings?.forEach(b => {
+  bookings?.forEach((b: any) => {
     const date = b.booking_date;
     bookingsByDateMap.set(date, (bookingsByDateMap.get(date) || 0) + 1);
   });
@@ -106,13 +106,13 @@ export async function fetchAnalyticsData(
     .sort((a, b) => a.date.localeCompare(b.date));
 
   // Total visitors (sum of all tickets)
-  const totalVisitors = bookings?.reduce((sum, b) => {
+  const totalVisitors = bookings?.reduce((sum: number, b: any) => {
     return sum + (ticketCountMap.get(b.id) || 0);
   }, 0) || 0;
 
   // Visitors by exhibition
   const visitorsByExhibitionMap = new Map<string, { name: string; count: number }>();
-  bookings?.forEach(b => {
+  bookings?.forEach((b: any) => {
     if (b.exhibitions) {
       const exhibitionId = b.exhibitions.id;
       const exhibitionName = b.exhibitions.name;
@@ -132,7 +132,7 @@ export async function fetchAnalyticsData(
 
   // Top exhibitions by bookings and revenue
   const exhibitionStatsMap = new Map<string, { name: string; bookings: number; revenue: number }>();
-  bookings?.forEach(b => {
+  bookings?.forEach((b: any) => {
     if (b.exhibitions) {
       const exhibitionId = b.exhibitions.id;
       const exhibitionName = b.exhibitions.name;
@@ -168,11 +168,11 @@ export async function fetchAnalyticsData(
     .gte('booking_date', startDateStr)
     .lte('booking_date', endDateStr)
     .eq('payment_status', 'paid')
-    .not('time_slot_id', 'is', null);
+    .not('time_slot_id', 'is', null) as any;
 
   // Count bookings per time slot
   const timeSlotMap = new Map<string, number>();
-  timeSlotBookings?.forEach(booking => {
+  timeSlotBookings?.forEach((booking: any) => {
     if (booking.time_slots) {
       const startTime = booking.time_slots.start_time.substring(0, 5); // Get HH:MM
       timeSlotMap.set(startTime, (timeSlotMap.get(startTime) || 0) + 1);
