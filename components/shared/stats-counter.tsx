@@ -71,7 +71,7 @@ export function StatsCounter() {
           <ScrollReveal
             baseOpacity={0.2}
             enableBlur={true}
-            baseRotation={4}
+            baseRotation={0}
             blurStrength={8}
             containerClassName="mb-4"
             textClassName="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground"

@@ -86,7 +86,7 @@ export function FeaturedExhibitions() {
           <ScrollReveal
             baseOpacity={0.2}
             enableBlur={true}
-            baseRotation={3}
+            baseRotation={0}
             blurStrength={6}
             containerClassName="mb-4"
             textClassName="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground"

@@ -56,24 +56,26 @@ const ScrollReveal: React.FC<ScrollRevealProps> = ({
         ? scrollContainerRef.current
         : window;
 
-    // Rotation animation
-    gsap.fromTo(
-      el,
-      { transformOrigin: '0% 50%', rotate: baseRotation },
-      {
-        ease: 'none',
-        rotate: 0,
-        scrollTrigger: {
-          trigger: el,
-          scroller,
-          start: 'top 80%',
-          end: 'top 30%',
-          scrub: 1,
-        },
-      }
-    );
+    // Only add rotation if baseRotation is not 0
+    if (baseRotation !== 0) {
+      gsap.fromTo(
+        el,
+        { transformOrigin: '0% 50%', rotate: baseRotation },
+        {
+          ease: 'none',
+          rotate: 0,
+          scrollTrigger: {
+            trigger: el,
+            scroller,
+            start: 'top 80%',
+            end: 'top 30%',
+            scrub: 1,
+          },
+        }
+      );
+    }
 
-    // Word opacity animation
+    // Word opacity animation with stagger
     const wordElements = el.querySelectorAll<HTMLElement>('.word');
     gsap.fromTo(
       wordElements,
@@ -81,7 +83,10 @@ const ScrollReveal: React.FC<ScrollRevealProps> = ({
       {
         ease: 'none',
         opacity: 1,
-        stagger: 0.05,
+        stagger: {
+          each: 0.02,
+          from: 'start',
+        },
         scrollTrigger: {
           trigger: el,
           scroller,
@@ -92,7 +97,7 @@ const ScrollReveal: React.FC<ScrollRevealProps> = ({
       }
     );
 
-    // Blur animation
+    // Blur animation with stagger
     if (enableBlur) {
       gsap.fromTo(
         wordElements,
@@ -100,7 +105,10 @@ const ScrollReveal: React.FC<ScrollRevealProps> = ({
         {
           ease: 'none',
           filter: 'blur(0px)',
-          stagger: 0.05,
+          stagger: {
+            each: 0.02,
+            from: 'start',
+          },
           scrollTrigger: {
             trigger: el,
             scroller,

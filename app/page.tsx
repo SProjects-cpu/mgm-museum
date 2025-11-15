@@ -27,7 +27,7 @@ export default function HomePage() {
             <ScrollReveal
               baseOpacity={0}
               enableBlur={true}
-              baseRotation={5}
+              baseRotation={0}
               blurStrength={10}
               containerClassName="text-center"
               textClassName="text-4xl md:text-5xl lg:text-6xl font-bold text-slate-900 dark:text-slate-100"
