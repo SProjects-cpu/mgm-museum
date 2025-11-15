@@ -9,6 +9,7 @@ import { MUSEUM_INFO } from "@/lib/constants";
 import { Toaster } from "sonner";
 import { RealtimeSyncProvider } from "@/lib/contexts/realtime-sync-context"; // Re-enabled with environment-based control
 import { NotFoundProvider } from "@/lib/contexts/not-found-context";
+import MinimalChatBox from "@/components/ui/minimal-chat-box";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -116,6 +117,7 @@ export default function RootLayout({
             <ConditionalMain>{children}</ConditionalMain>
             <ConditionalFooter />
             <Toaster position="top-right" richColors />
+            <MinimalChatBox />
           </NotFoundProvider>
         </RealtimeSyncProvider>
       </body>
