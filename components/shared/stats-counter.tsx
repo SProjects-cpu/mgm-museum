@@ -74,7 +74,7 @@ export function StatsCounter() {
             baseRotation={4}
             blurStrength={8}
             containerClassName="mb-4"
-            textClassName="text-3xl md:text-4xl lg:text-5xl font-bold"
+            textClassName="text-3xl md:text-4xl lg:text-5xl font-bold text-foreground"
             as="h2"
           >
             Our Impact in Numbers

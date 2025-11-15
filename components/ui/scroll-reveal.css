@@ -7,8 +7,10 @@
   line-height: 1.5;
   font-weight: 600;
   display: block;
+  color: inherit;
 }
 
 .word {
   display: inline-block;
+  margin-right: 0.25em;
 }

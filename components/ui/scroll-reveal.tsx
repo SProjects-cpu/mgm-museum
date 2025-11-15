@@ -66,9 +66,9 @@ const ScrollReveal: React.FC<ScrollRevealProps> = ({
         scrollTrigger: {
           trigger: el,
           scroller,
-          start: 'top bottom',
-          end: rotationEnd,
-          scrub: true,
+          start: 'top 80%',
+          end: 'top 30%',
+          scrub: 1,
         },
       }
     );
@@ -85,9 +85,9 @@ const ScrollReveal: React.FC<ScrollRevealProps> = ({
         scrollTrigger: {
           trigger: el,
           scroller,
-          start: 'top bottom-=20%',
-          end: wordAnimationEnd,
-          scrub: true,
+          start: 'top 80%',
+          end: 'top 20%',
+          scrub: 1,
         },
       }
     );
@@ -96,7 +96,7 @@ const ScrollReveal: React.FC<ScrollRevealProps> = ({
     if (enableBlur) {
       gsap.fromTo(
         wordElements,
-        { filter: `blur(${blurStrength}px)` },
+        { filter: `blur(${blurStrength}px)`, willChange: 'filter' },
         {
           ease: 'none',
           filter: 'blur(0px)',
@@ -104,9 +104,9 @@ const ScrollReveal: React.FC<ScrollRevealProps> = ({
           scrollTrigger: {
             trigger: el,
             scroller,
-            start: 'top bottom-=20%',
-            end: wordAnimationEnd,
-            scrub: true,
+            start: 'top 80%',
+            end: 'top 20%',
+            scrub: 1,
           },
         }
       );

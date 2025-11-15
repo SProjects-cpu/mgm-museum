@@ -22,7 +22,7 @@ export default function HomePage() {
         <MuseumHero />
         
         {/* Scroll Reveal Section */}
-        <section className="py-20 bg-gradient-to-br from-background via-primary/5 to-background">
+        <section className="py-20 bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 dark:from-slate-900 dark:via-blue-950 dark:to-purple-950">
           <div className="container px-4">
             <ScrollReveal
               baseOpacity={0}
@@ -30,7 +30,7 @@ export default function HomePage() {
               baseRotation={5}
               blurStrength={10}
               containerClassName="text-center"
-              textClassName="text-4xl md:text-5xl lg:text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary via-accent to-primary"
+              textClassName="text-4xl md:text-5xl lg:text-6xl font-bold text-slate-900 dark:text-slate-100"
               as="h2"
             >
               Discover the wonders of science and technology at MGM Museum, where curiosity meets innovation and learning becomes an adventure
