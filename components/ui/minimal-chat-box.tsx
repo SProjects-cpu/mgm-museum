@@ -3,23 +3,89 @@
 import * as React from "react"
 import { motion, MotionConfig } from "framer-motion"
 import { Input } from "@/components/ui/input"
-import { MessageSquare, X, Send } from "lucide-react"
+import { MessageSquare, X, Send, Loader2 } from "lucide-react"
 
 const transition = {
-  type: "spring",
+  type: "spring" as const,
   bounce: 0,
   duration: 0.3,
 }
 
+interface Message {
+  role: "user" | "assistant"
+  text: string
+}
+
 export default function MinimalChatBox() {
   const [isOpen, setIsOpen] = React.useState(false)
-  const [messages, setMessages] = React.useState<string[]>([])
+  const [messages, setMessages] = React.useState<Message[]>([])
   const [input, setInput] = React.useState("")
+  const [isLoading, setIsLoading] = React.useState(false)
+  const messagesEndRef = React.useRef<HTMLDivElement>(null)
 
-  const handleSend = () => {
-    if (input.trim()) {
-      setMessages((prev) => [...prev, input.trim()])
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
+  }
+
+  React.useEffect(() => {
+    scrollToBottom()
+  }, [messages])
+
+  const handleSend = async () => {
+    if (input.trim() && !isLoading) {
+      const userMessage = input.trim()
       setInput("")
+      
+      // Add user message
+      setMessages((prev) => [...prev, { role: "user", text: userMessage }])
+      setIsLoading(true)
+
+      try {
+        // Call AI API
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            message: userMessage,
+            conversationHistory: messages.map((msg) => ({
+              role: msg.role,
+              text: msg.text,
+            })),
+          }),
+        })
+
+        const data = await response.json()
+
+        if (response.ok && data.response) {
+          // Add AI response
+          setMessages((prev) => [
+            ...prev,
+            { role: "assistant", text: data.response },
+          ])
+        } else {
+          // Error handling
+          setMessages((prev) => [
+            ...prev,
+            {
+              role: "assistant",
+              text: "Sorry, I'm having trouble responding right now. Please try again or contact us directly.",
+            },
+          ])
+        }
+      } catch (error) {
+        console.error("Chat error:", error)
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: "assistant",
+            text: "Sorry, I'm having trouble connecting. Please try again later.",
+          },
+        ])
+      } finally {
+        setIsLoading(false)
+      }
     }
   }
 
@@ -58,18 +124,59 @@ export default function MinimalChatBox() {
           {isOpen && (
             <div className="flex-1 px-4 py-2 overflow-y-auto flex flex-col gap-2 bg-white dark:bg-gray-900">
               {messages.length === 0 ? (
-                <span className="text-gray-400 text-sm">
-                  No messages yet. Say hi!
-                </span>
-              ) : (
-                messages.map((msg, idx) => (
-                  <div
-                    key={idx}
-                    className="self-start bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 rounded text-sm max-w-[85%]"
-                  >
-                    {msg}
+                <div className="flex flex-col gap-2">
+                  <span className="text-gray-400 text-sm">
+                    👋 Welcome to MGM Museum! How can we help you today?
+                  </span>
+                  <div className="flex flex-col gap-1 mt-2">
+                    <button
+                      onClick={() => {
+                        setInput("What are your opening hours?")
+                      }}
+                      className="text-left text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-2 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                    >
+                      🕒 What are your opening hours?
+                    </button>
+                    <button
+                      onClick={() => {
+                        setInput("How do I book tickets?")
+                      }}
+                      className="text-left text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-2 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                    >
+                      🎫 How do I book tickets?
+                    </button>
+                    <button
+                      onClick={() => {
+                        setInput("What exhibitions are available?")
+                      }}
+                      className="text-left text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 p-2 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors"
+                    >
+                      🎨 What exhibitions are available?
+                    </button>
                   </div>
-                ))
+                </div>
+              ) : (
+                <>
+                  {messages.map((msg, idx) => (
+                    <div
+                      key={idx}
+                      className={`px-3 py-2 rounded-lg text-sm max-w-[85%] ${
+                        msg.role === "user"
+                          ? "self-end bg-blue-600 text-white"
+                          : "self-start bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100"
+                      }`}
+                    >
+                      {msg.text}
+                    </div>
+                  ))}
+                  {isLoading && (
+                    <div className="self-start bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded-lg text-sm flex items-center gap-2">
+                      <Loader2 size={14} className="animate-spin text-gray-600 dark:text-gray-400" />
+                      <span className="text-gray-600 dark:text-gray-400">Typing...</span>
+                    </div>
+                  )}
+                  <div ref={messagesEndRef} />
+                </>
               )}
             </div>
           )}
@@ -82,14 +189,16 @@ export default function MinimalChatBox() {
                 placeholder="Type a message..."
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                onKeyDown={(e) => e.key === "Enter" && !isLoading && handleSend()}
+                disabled={isLoading}
               />
-              <div
-                className="flex items-center justify-center w-10 h-10 rounded-md bg-gray-800 dark:bg-gray-700 cursor-pointer hover:bg-gray-700 dark:hover:bg-gray-600 transition-colors"
+              <button
+                className="flex items-center justify-center w-10 h-10 rounded-md bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                 onClick={handleSend}
+                disabled={isLoading || !input.trim()}
               >
                 <Send size={18} className="text-white" />
-              </div>
+              </button>
             </div>
           )}
         </motion.div>
