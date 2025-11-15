@@ -11,6 +11,8 @@ import { useInView } from "react-intersection-observer";
 import { formatCurrency } from "@/lib/utils";
 import { FallingPattern } from "@/components/ui/falling-pattern";
 import { getServiceSupabase } from "@/lib/supabase/client";
+import ScrollReveal from "@/components/ui/scroll-reveal";
+import "@/components/ui/scroll-reveal.css";
 
 interface Exhibition {
   id: string;
@@ -81,9 +83,17 @@ export function FeaturedExhibitions() {
           <Badge className="mb-4" variant="secondary">
             Featured Experiences
           </Badge>
-          <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
+          <ScrollReveal
+            baseOpacity={0.2}
+            enableBlur={true}
+            baseRotation={3}
+            blurStrength={6}
+            containerClassName="mb-4"
+            textClassName="text-3xl md:text-4xl lg:text-5xl font-bold"
+            as="h2"
+          >
             Current Exhibitions & Shows
-          </h2>
+          </ScrollReveal>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Immerse yourself in cutting-edge science and technology through our
             interactive exhibitions and spectacular shows
