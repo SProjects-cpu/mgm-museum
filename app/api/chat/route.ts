@@ -1,148 +1,146 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const GEMINI_MODEL = "gemini-2.5-flash";
+// Knowledge base for the museum chatbot
+const KNOWLEDGE_BASE: Record<string, string> = {
+  "opening hours": `Our opening hours are:
 
-interface GeminiResponse {
-  candidates?: Array<{
-    content: {
-      parts: Array<{
-        text: string;
-      }>;
-    };
-  }>;
-  error?: {
-    code: number;
-    message: string;
-  };
+• Tuesday to Sunday: 10:00 AM - 6:00 PM
+• Monday: Closed (Weekly maintenance)
+• Last entry: 5:30 PM
+
+Note: We may have extended hours during holidays and special events.`,
+
+  "book tickets": `You can book tickets in three easy ways:
+
+1. Online Booking (Recommended)
+   • Visit our website and go to the Exhibitions page
+   • Select your preferred exhibition and date
+   • Choose ticket types and time slots
+   • Complete payment securely online
+
+2. Phone Booking
+   • Call us at +91-XXXXXXXXXX
+   • Our staff will assist you with the booking
+
+3. Walk-in Purchase
+   • Visit our ticket counter directly
+   • Subject to availability
+
+Tip: Online booking offers the best prices and guaranteed entry!`,
+
+  "exhibitions": `We have several exciting exhibitions:
+
+1. Planetarium Shows
+   • Immersive dome experiences about space and astronomy
+   • Duration: 45-60 minutes
+   • Perfect for all ages
+
+2. Science Gallery
+   • Interactive exhibits on physics, chemistry, and biology
+   • Hands-on experiments and demonstrations
+
+3. Holography Gallery
+   • 3D holographic displays and optical illusions
+   • Unique photo opportunities
+
+4. Technology Zone
+   • Robotics, AI, and modern technology exhibits
+   • Live demonstrations throughout the day
+
+Visit our Exhibitions page for detailed information and booking.`,
+
+  "pricing": `Our ticket pricing varies by visitor type:
+
+• Adults: ₹200-300 (depending on exhibition)
+• Children (5-12 years): ₹100-150
+• Students (with valid ID): ₹150-200
+• Senior Citizens (60+): ₹150-200
+• Children under 5: Free entry
+
+Special Offers:
+• Group bookings (10+ visitors): 15% discount
+• School groups: Special educational packages
+• Family packages: Available for 2 adults + 2 children
+
+Prices may vary by exhibition. Check individual exhibition pages for exact pricing.`,
+
+  "location": `MGM Science Centre Museum
+
+Address: Science Centre Complex, City
+Contact: +91-XXXXXXXXXX
+Email: info@mgmmuseum.com
+
+How to reach:
+• By Metro: Nearest station is Science Centre (500m walk)
+• By Bus: Routes 45, 67, 89 stop nearby
+• By Car: Ample parking available (₹50 for 4 hours)
+
+The museum is wheelchair accessible with dedicated parking spaces.`,
+
+  "default": `I'm here to help you with information about MGM Science Centre Museum!
+
+I can assist you with:
+• Opening hours and visiting information
+• Exhibition details and descriptions
+• Ticket booking and pricing
+• Location and directions
+• Visitor guidelines and facilities
+
+What would you like to know?`
+};
+
+function findBestMatch(query: string): string {
+  const lowerQuery = query.toLowerCase();
+  
+  // Check for specific keywords
+  if (lowerQuery.includes("hour") || lowerQuery.includes("time") || lowerQuery.includes("open")) {
+    return KNOWLEDGE_BASE["opening hours"];
+  }
+  
+  if (lowerQuery.includes("book") || lowerQuery.includes("ticket") || lowerQuery.includes("reservation")) {
+    return KNOWLEDGE_BASE["book tickets"];
+  }
+  
+  if (lowerQuery.includes("exhibition") || lowerQuery.includes("show") || lowerQuery.includes("available")) {
+    return KNOWLEDGE_BASE["exhibitions"];
+  }
+  
+  if (lowerQuery.includes("price") || lowerQuery.includes("cost") || lowerQuery.includes("fee")) {
+    return KNOWLEDGE_BASE["pricing"];
+  }
+  
+  if (lowerQuery.includes("location") || lowerQuery.includes("address") || lowerQuery.includes("reach") || lowerQuery.includes("direction")) {
+    return KNOWLEDGE_BASE["location"];
+  }
+  
+  // Default response
+  return KNOWLEDGE_BASE["default"];
 }
-
-// System prompt for MGM Museum chatbot
-const SYSTEM_PROMPT = `You are a helpful customer support assistant for MGM APJ Abdul Kalam Astrospace Science Centre in Aurangabad, India. 
-
-Your role is to help visitors with:
-- Museum information (opening hours, location, contact details)
-- Ticket booking and pricing
-- Exhibition information
-- Planetarium show timings
-- Facilities and amenities
-- Directions and accessibility
-
-Key Information:
-- Opening Hours: 9:30 AM to 5:30 PM (Closed on Mondays)
-- Location: Aurangabad, Maharashtra, India
-- Facilities: Planetarium, Science Exhibitions, 3D Theatre, Holography Gallery
-- Ticket booking available online
-
-Be friendly, concise, and helpful. If you don't know something specific, guide users to contact the museum directly.`;
 
 export async function POST(request: NextRequest) {
   try {
-    if (!GEMINI_API_KEY) {
-      return NextResponse.json(
-        { error: "Gemini API key not configured" },
-        { status: 500 }
-      );
-    }
-
-    const { message, conversationHistory } = await request.json();
+    const body = await request.json();
+    const { message } = body;
 
     if (!message || typeof message !== "string") {
       return NextResponse.json(
-        { error: "Message is required" },
+        { error: "Invalid message format" },
         { status: 400 }
       );
     }
 
-    // Build conversation context
-    const contents = [
-      {
-        role: "user",
-        parts: [{ text: SYSTEM_PROMPT }],
-      },
-      {
-        role: "model",
-        parts: [{ text: "I understand. I'm here to help visitors with information about MGM APJ Abdul Kalam Astrospace Science Centre." }],
-      },
-    ];
+    // Find best matching response
+    const response = findBestMatch(message);
 
-    // Add conversation history if provided
-    if (conversationHistory && Array.isArray(conversationHistory)) {
-      conversationHistory.forEach((msg: { role: string; text: string }) => {
-        contents.push({
-          role: msg.role === "user" ? "user" : "model",
-          parts: [{ text: msg.text }],
-        });
-      });
-    }
-
-    // Add current message
-    contents.push({
-      role: "user",
-      parts: [{ text: message }],
+    return NextResponse.json({
+      response,
+      success: true,
     });
-
-    // Call Gemini API
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          contents: contents,
-          generationConfig: {
-            temperature: 0.7,
-            maxOutputTokens: 500,
-            topP: 0.8,
-            topK: 40,
-          },
-          safetySettings: [
-            {
-              category: "HARM_CATEGORY_HARASSMENT",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE",
-            },
-            {
-              category: "HARM_CATEGORY_HATE_SPEECH",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE",
-            },
-            {
-              category: "HARM_CATEGORY_SEXUALLY_EXPLICIT",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE",
-            },
-            {
-              category: "HARM_CATEGORY_DANGEROUS_CONTENT",
-              threshold: "BLOCK_MEDIUM_AND_ABOVE",
-            },
-          ],
-        }),
-      }
-    );
-
-    const data: GeminiResponse = await response.json();
-
-    if (!response.ok || data.error) {
-      console.error("Gemini API error:", data.error);
-      return NextResponse.json(
-        { error: "Failed to get AI response" },
-        { status: 500 }
-      );
-    }
-
-    if (data.candidates && data.candidates.length > 0) {
-      const aiResponse = data.candidates[0].content.parts[0].text;
-      return NextResponse.json({ response: aiResponse });
-    }
-
-    return NextResponse.json(
-      { error: "No response generated" },
-      { status: 500 }
-    );
-  } catch (error) {
+  } catch (error: any) {
     console.error("Chat API error:", error);
+    
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Failed to process chat request" },
       { status: 500 }
     );
   }

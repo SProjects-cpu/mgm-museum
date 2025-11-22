@@ -172,7 +172,7 @@ export default function MinimalChatBox() {
                   {isLoading && (
                     <div className="self-start bg-gray-100 dark:bg-gray-800 px-3 py-2 rounded-lg text-sm flex items-center gap-2">
                       <Loader2 size={14} className="animate-spin text-gray-600 dark:text-gray-400" />
-                      <span className="text-gray-600 dark:text-gray-400">Typing...</span>
+                      <span className="text-gray-600 dark:text-gray-400">Thinking...</span>
                     </div>
                   )}
                   <div ref={messagesEndRef} />
