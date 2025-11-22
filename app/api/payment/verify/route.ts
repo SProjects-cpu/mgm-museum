@@ -121,26 +121,29 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        // Create booking
+        // Create booking with correct schema
         const bookingData = {
           user_id: user.id,
           exhibition_id: item.exhibitionId || null,
           show_id: item.showId || null,
           time_slot_id: item.timeSlotId,
           booking_date: item.bookingDate,
-          adult_tickets: item.tickets?.adult || 0,
-          child_tickets: item.tickets?.child || 0,
-          student_tickets: item.tickets?.student || 0,
-          senior_tickets: item.tickets?.senior || 0,
-          total_tickets: item.totalTickets,
           total_amount: item.subtotal,
           payment_status: "paid",
-          booking_status: "confirmed",
-          payment_order_id: (paymentOrder as any).id,
-          razorpay_payment_id: razorpay_payment_id,
-          customer_name: (paymentOrder as any).payment_name,
-          customer_email: (paymentOrder as any).payment_email,
-          customer_phone: (paymentOrder as any).payment_contact,
+          status: "confirmed",
+          payment_order_id: razorpay_order_id,
+          payment_id: razorpay_payment_id,
+          payment_signature: razorpay_signature,
+          payment_method: "razorpay",
+          guest_name: (paymentOrder as any).payment_name,
+          guest_email: (paymentOrder as any).payment_email,
+          guest_phone: (paymentOrder as any).payment_contact,
+          metadata: {
+            tickets: item.tickets,
+            totalTickets: item.totalTickets,
+            exhibitionName: item.exhibitionName,
+            showName: item.showName,
+          },
         };
 
         // @ts-ignore - Supabase type inference issue
@@ -152,7 +155,14 @@ export async function POST(request: NextRequest) {
           .single();
 
         if (bookingError) {
-          console.error("Error creating booking:", bookingError);
+          console.error("Error creating booking:", {
+            error: bookingError,
+            message: bookingError.message,
+            details: bookingError.details,
+            hint: bookingError.hint,
+            code: bookingError.code,
+            bookingData: bookingData,
+          });
           continue;
         }
 
