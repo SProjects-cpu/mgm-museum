@@ -76,7 +76,7 @@ export async function POST(
         price: parseFloat(price),
         active,
         valid_from: new Date().toISOString(),
-      })
+      } as any)
       .select()
       .single();
 
@@ -118,12 +118,13 @@ export async function PUT(
     const body = await request.json();
     const { price, active } = body;
 
-    const updateData: any = {};
+    const updateData: Record<string, any> = {};
     if (price !== undefined) updateData.price = parseFloat(price);
     if (active !== undefined) updateData.active = active;
 
     const { data, error } = await supabase
       .from("exhibition_pricing")
+      // @ts-ignore - Supabase type inference issue with dynamic updates
       .update(updateData)
       .eq("id", pricingId)
       .select()
