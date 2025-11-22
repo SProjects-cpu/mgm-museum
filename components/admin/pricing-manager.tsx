@@ -52,7 +52,8 @@ export function PricingManager({
       return;
     }
 
-    onChange([...pricing, { ...newPricing, id: Date.now().toString() }]);
+    // Don't assign an ID - let the API assign it after creation
+    onChange([...pricing, { ...newPricing }]);
     setNewPricing({
       ticketType: "adult",
       price: 0,
