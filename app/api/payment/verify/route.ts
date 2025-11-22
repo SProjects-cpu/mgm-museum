@@ -1,442 +1,190 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { verifyPaymentSignature, generateBookingReference } from '@/lib/razorpay/utils';
-import { sendBookingConfirmation } from '@/lib/email/send-booking-confirmation';
-import { formatDateForDisplay } from '@/lib/utils/date-helpers';
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import crypto from "crypto";
 
 export async function POST(request: NextRequest) {
   try {
+    const supabase = await createClient();
+    
     // Get authenticated user
-    const authHeader = request.headers.get('authorization');
-    if (!authHeader) {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
       return NextResponse.json(
-        { success: false, message: 'Authentication required' },
+        { success: false, message: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    // Create Supabase client with user's auth token
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        global: {
-          headers: {
-            Authorization: authHeader
-          }
-        }
-      }
-    );
-    
-    // Get request body
     const body = await request.json();
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = body;
+
+    console.log('Payment verification request:', {
+      orderId: razorpay_order_id,
+      paymentId: razorpay_payment_id,
+      userId: user.id
+    });
 
     // Validate required fields
     if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
       return NextResponse.json(
-        { success: false, message: 'Missing payment verification data' },
+        { success: false, message: "Missing payment verification data" },
         { status: 400 }
       );
     }
 
-    // Verify payment signature
-    const isValid = verifyPaymentSignature(
-      razorpay_order_id,
-      razorpay_payment_id,
-      razorpay_signature
-    );
-
-    if (!isValid) {
-      // Log security event
-      console.error('Invalid payment signature detected:', {
-        order_id: razorpay_order_id,
-        payment_id: razorpay_payment_id,
-      });
-
+    // Verify signature
+    const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET;
+    if (!razorpayKeySecret) {
+      console.error("Razorpay key secret not configured");
       return NextResponse.json(
-        { success: false, message: 'Invalid payment signature' },
+        { success: false, message: "Payment gateway not configured" },
+        { status: 500 }
+      );
+    }
+
+    const generatedSignature = crypto
+      .createHmac("sha256", razorpayKeySecret)
+      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .digest("hex");
+
+    if (generatedSignature !== razorpay_signature) {
+      console.error("Invalid payment signature");
+      return NextResponse.json(
+        { success: false, message: "Invalid payment signature" },
         { status: 400 }
       );
     }
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    console.log('Payment signature verified successfully');
 
-    if (authError || !user) {
-      console.error('Auth error:', authError);
-      return NextResponse.json(
-        { success: false, message: 'Invalid authentication' },
-        { status: 401 }
-      );
-    }
-
-    console.log('Verifying payment for user:', user.id);
-
-    // Ensure user exists in public.users table
-    const { data: existingUser } = await supabase
-      .from('users')
-      .select('id')
-      .eq('id', user.id)
+    // Get payment order from database
+    const { data: paymentOrder, error: orderError } = await supabase
+      .from("payment_orders")
+      .select("*")
+      .eq("razorpay_order_id", razorpay_order_id)
+      .eq("user_id", user.id)
       .single();
 
-    if (!existingUser) {
-      console.log('Creating user record in public.users for:', user.id);
-      const { error: userError } = await supabase
-        .from('users')
-        .insert({
-          id: user.id,
-          email: user.email || '',
-          // Let database handle timestamps with DEFAULT NOW()
-        });
-      
-      if (userError) {
-        console.error('Failed to create user record:', userError);
-        return NextResponse.json(
-          { success: false, message: 'Failed to create user account' },
-          { status: 500 }
-        );
-      }
-    }
-
-    // Fetch payment order from database
-    const { data: paymentOrder, error: fetchError } = await supabase
-      .from('payment_orders')
-      .select('*')
-      .eq('razorpay_order_id', razorpay_order_id)
-      .eq('user_id', user.id)
-      .single();
-
-    if (fetchError || !paymentOrder) {
+    if (orderError || !paymentOrder) {
+      console.error("Payment order not found:", orderError);
       return NextResponse.json(
-        { success: false, message: 'Payment order not found' },
+        { success: false, message: "Payment order not found" },
         { status: 404 }
       );
     }
 
-    // Check if already processed
-    if (paymentOrder.status === 'paid') {
-      return NextResponse.json(
-        { success: false, message: 'Payment already processed' },
-        { status: 400 }
-      );
-    }
+    console.log('Payment order found:', (paymentOrder as any).id);
 
     // Update payment order status
+    // @ts-ignore - Supabase type inference issue
     const { error: updateError } = await supabase
-      .from('payment_orders')
+      .from("payment_orders")
+      // @ts-ignore
       .update({
-        status: 'paid',
-        payment_id: razorpay_payment_id,
-        payment_signature: razorpay_signature,
-        // Let database handle updated_at with DEFAULT NOW()
+        razorpay_payment_id: razorpay_payment_id,
+        razorpay_signature: razorpay_signature,
+        status: "paid",
+        paid_at: new Date().toISOString(),
       })
-      .eq('id', paymentOrder.id);
+      .eq("id", (paymentOrder as any).id);
 
     if (updateError) {
-      console.error('Failed to update payment order:', updateError);
-      return NextResponse.json(
-        { success: false, message: 'Failed to update payment status' },
-        { status: 500 }
-      );
+      console.error("Error updating payment order:", updateError);
     }
 
-    // Convert cart items to bookings
-    const cartSnapshot = paymentOrder.cart_snapshot as any;
-    const cartItems = Array.isArray(cartSnapshot) ? cartSnapshot : (cartSnapshot?.items || []);
-    
-    console.log('Cart snapshot structure:', {
-      isArray: Array.isArray(cartSnapshot),
-      cartItemsLength: cartItems.length,
-      firstItem: cartItems[0],
-    });
-    
+    // Create bookings from cart snapshot
+    const cartItems = (paymentOrder as any).cart_snapshot || [];
+    console.log('Creating bookings for cart items:', cartItems.length);
+
     if (cartItems.length === 0) {
-      console.error('No cart items found in snapshot:', paymentOrder.cart_snapshot);
+      console.error("No cart items in payment order");
       return NextResponse.json(
-        { success: false, message: 'No items found in cart snapshot' },
+        { success: false, message: "No items to book" },
         { status: 400 }
       );
     }
 
-    const bookings: any[] = [];
-    const tickets: any[] = [];
-    const errors: any[] = [];
-
+    const bookings = [];
+    
     for (const item of cartItems) {
-      // Generate booking reference using utility function
-      const bookingReference = generateBookingReference();
+      try {
+        // Get time slot details
+        const { data: timeSlot, error: slotError } = await supabase
+          .from("time_slots")
+          .select("*")
+          .eq("id", item.timeSlotId)
+          .single();
 
-      console.log('Creating booking for item:', {
-        timeSlotId: item.timeSlotId,
-        exhibitionId: item.exhibitionId,
-        showId: item.showId,
-        bookingDate: item.bookingDate,
-      });
-
-      // Get time slot date for accurate booking date - CRITICAL: Always use slot_date as source of truth
-      const { data: timeSlot, error: timeSlotError } = await supabase
-        .from('time_slots')
-        .select('slot_date, start_time, end_time')
-        .eq('id', item.timeSlotId)
-        .single();
-
-      let actualBookingDate: string;
-      let actualBookingTime: string;
-      let fallbackUsed = false;
-
-      if (timeSlotError || !timeSlot || !timeSlot.slot_date) {
-        // CRITICAL: Payment has been processed - we MUST create the booking
-        // Use fallback date from cart item or today's date
-        console.warn('⚠️ Time slot not found - using fallback (PAYMENT ALREADY PROCESSED):', {
-          timeSlotId: item.timeSlotId,
-          error: timeSlotError,
-          timeSlot: timeSlot,
-          cartDate: item.date,
-          cartBookingDate: item.bookingDate,
-        });
-        
-        // Fallback 1: Use date from cart item
-        if (item.date) {
-          actualBookingDate = item.date;
-          fallbackUsed = true;
-        } else if (item.bookingDate) {
-          actualBookingDate = item.bookingDate;
-          fallbackUsed = true;
-        } else {
-          // Fallback 2: Use today's date (last resort)
-          actualBookingDate = new Date().toISOString().split('T')[0];
-          fallbackUsed = true;
+        if (slotError || !timeSlot) {
+          console.error(`Time slot not found for item:`, item);
+          continue;
         }
-        
-        // Fallback for booking time
-        if (item.time) {
-          actualBookingTime = item.time;
-        } else if (item.bookingTime) {
-          actualBookingTime = item.bookingTime;
-        } else {
-          actualBookingTime = '10:00:00-18:00:00'; // Default museum hours
-        }
-        
-        console.warn('✅ Using fallback booking data:', {
-          fallbackDate: actualBookingDate,
-          fallbackTime: actualBookingTime,
-          reason: 'Time slot data missing but payment processed - customer MUST get ticket',
-        });
-      } else {
-        actualBookingDate = timeSlot.slot_date; // Use slot_date from database
-        actualBookingTime = `${timeSlot.start_time}-${timeSlot.end_time}`;
-      }
-      
-      console.log('Booking date/time determined:', {
-        timeSlotId: item.timeSlotId,
-        bookingDate: actualBookingDate,
-        bookingTime: actualBookingTime,
-        fallbackUsed: fallbackUsed,
-      });
 
-      // Create booking - CRITICAL: This MUST succeed after payment
-      const { data: booking, error: bookingError } = await supabase
-        .from('bookings')
-        .insert({
-          booking_reference: bookingReference,
+        // Create booking
+        const bookingData = {
           user_id: user.id,
-          time_slot_id: item.timeSlotId,
           exhibition_id: item.exhibitionId || null,
           show_id: item.showId || null,
-          booking_date: actualBookingDate,
-          booking_time: actualBookingTime,
-          guest_name: (paymentOrder as any).payment_name || user.user_metadata?.name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Guest',
-          guest_email: paymentOrder.payment_email || user.email,
-          guest_phone: paymentOrder.payment_contact || null,
-          total_amount: item.subtotal || 0,
-          status: 'confirmed',
-          payment_status: 'paid',
-          payment_order_id: razorpay_order_id,
-          payment_id: razorpay_payment_id,
-          payment_method: 'razorpay',
-        })
-        .select()
-        .single();
+          time_slot_id: item.timeSlotId,
+          booking_date: item.bookingDate,
+          adult_tickets: item.tickets?.adult || 0,
+          child_tickets: item.tickets?.child || 0,
+          student_tickets: item.tickets?.student || 0,
+          senior_tickets: item.tickets?.senior || 0,
+          total_tickets: item.totalTickets,
+          total_amount: item.subtotal,
+          payment_status: "paid",
+          booking_status: "confirmed",
+          payment_order_id: (paymentOrder as any).id,
+          razorpay_payment_id: razorpay_payment_id,
+          customer_name: (paymentOrder as any).payment_name,
+          customer_email: (paymentOrder as any).payment_email,
+          customer_phone: (paymentOrder as any).payment_contact,
+        };
 
-      if (bookingError) {
-        console.error('Failed to create booking:', {
-          error: bookingError,
-          errorCode: bookingError.code,
-          errorMessage: bookingError.message,
-          errorDetails: bookingError.details,
-          item: item,
-        });
-        errors.push({
-          item: item.exhibitionName || item.showName,
-          error: bookingError.message,
-          code: bookingError.code,
-        });
-        continue;
-      }
+        // @ts-ignore - Supabase type inference issue
+        const { data: booking, error: bookingError } = await supabase
+          .from("bookings")
+          // @ts-ignore
+          .insert(bookingData)
+          .select()
+          .single();
 
-      console.log('Booking created successfully:', booking.id);
-      bookings.push(booking);
+        if (bookingError) {
+          console.error("Error creating booking:", bookingError);
+          continue;
+        }
 
-      // Create ticket record (PDF generation will be done separately)
-      const ticketNumber = `TKT${Date.now()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-      const { data: ticket, error: ticketError } = await supabase
-        .from('tickets')
-        .insert({
-          booking_id: booking.id,
-          ticket_number: ticketNumber,
-          qr_code: bookingReference, // QR code will contain booking reference
-          status: 'active',
-        })
-        .select()
-        .single();
-
-      if (!ticketError && ticket) {
-        tickets.push(ticket);
+        if (booking) {
+          console.log('Booking created:', (booking as any).id);
+          bookings.push(booking);
+        }
+      } catch (error) {
+        console.error("Error processing cart item:", error);
       }
     }
 
-    // Clear cart items for user
-    await supabase
-      .from('cart_items')
-      .delete()
-      .eq('user_id', user.id);
-
-    console.log('Payment verification complete:', {
-      bookingsCreated: bookings.length,
-      ticketsCreated: tickets.length,
-      bookingIds: bookings.map(b => b.id),
-      errors: errors,
-    });
-
     if (bookings.length === 0) {
-      console.error('No bookings were created despite successful payment', {
-        totalItems: cartItems.length,
-        errors: errors,
-      });
-      
-      // Return detailed error message
-      const errorMessage = errors.length > 0
-        ? `Booking creation failed: ${errors[0].error} (Code: ${errors[0].code})`
-        : 'Failed to create bookings. Please contact support.';
-      
+      console.error("No bookings were created");
       return NextResponse.json(
-        { 
-          success: false, 
-          message: errorMessage,
-          details: errors,
-        },
+        { success: false, message: "Failed to create bookings" },
         { status: 500 }
       );
     }
 
-    // Send booking confirmation email
-    if (bookings.length > 0 && bookings[0]) {
-      const firstBooking = bookings[0];
-      const guestEmail = paymentOrder.payment_email || user.email;
-      
-      // Calculate total amount from ALL bookings (not just first one)
-      const totalAmount = bookings.reduce((sum, booking) => sum + Number(booking.total_amount), 0);
-      
-      // Count actual tickets created
-      const totalTickets = tickets.length;
-      
-      // Get event details
-      const { data: eventData } = await supabase
-        .from('bookings')
-        .select(`
-          exhibitions:exhibition_id (name),
-          shows:show_id (name),
-          time_slots:time_slot_id (start_time, end_time, slot_date)
-        `)
-        .eq('id', firstBooking.id)
-        .single();
-
-      if (eventData && guestEmail) {
-        const exhibitions = eventData.exhibitions as any;
-        const shows = eventData.shows as any;
-        const timeSlots = eventData.time_slots as any;
-        
-        const eventTitle = exhibitions?.name || shows?.name || 'Museum Visit';
-        
-        if (timeSlots && timeSlots.slot_date && timeSlots.start_time && timeSlots.end_time) {
-          // Format date using helper to avoid timezone conversion issues
-          const visitDate = formatDateForDisplay(timeSlots.slot_date);
-          
-          const formatTime = (time: string) => {
-            const [hours, minutes] = time.split(':').map(Number);
-            const period = hours >= 12 ? 'PM' : 'AM';
-            const displayHours = hours % 12 || 12;
-            return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
-          };
-          
-          const timeSlot = `${formatTime(timeSlots.start_time)} - ${formatTime(timeSlots.end_time)}`;
-          
-          // Send email (don't block response if email fails)
-          console.log('Attempting to send confirmation email to:', guestEmail);
-          console.log('Email parameters:', {
-            guestName: firstBooking.guest_name,
-            bookingReference: firstBooking.booking_reference,
-            eventTitle,
-            visitDate,
-            timeSlot,
-            totalAmount: totalAmount, // Use aggregated total
-            ticketCount: totalTickets, // Use actual ticket count
-            bookingsCount: bookings.length,
-          });
-          
-          sendBookingConfirmation({
-            to: guestEmail,
-            guestName: firstBooking.guest_name,
-            bookingReference: firstBooking.booking_reference,
-            eventTitle,
-            visitDate,
-            timeSlot,
-            totalAmount: totalAmount, // Use aggregated total from all bookings
-            ticketCount: totalTickets, // Use actual ticket count
-            paymentId: razorpay_payment_id,
-          })
-            .then((result) => {
-              if (result.success) {
-                console.log('✅ Confirmation email sent successfully to:', guestEmail);
-              } else {
-                console.error('❌ Failed to send confirmation email:', {
-                  email: guestEmail,
-                  error: result.error,
-                  bookingRef: firstBooking.booking_reference,
-                });
-              }
-            })
-            .catch((error) => {
-              console.error('💥 Exception while sending confirmation email:', {
-                email: guestEmail,
-                error: error.message,
-                stack: error.stack,
-                bookingRef: firstBooking.booking_reference,
-              });
-            });
-        } else {
-          console.warn('⚠️ Cannot send confirmation email - missing time slot data:', {
-            hasTimeSlots: !!timeSlots,
-            hasSlotDate: timeSlots?.slot_date,
-            hasStartTime: timeSlots?.start_time,
-            hasEndTime: timeSlots?.end_time,
-            bookingRef: firstBooking.booking_reference,
-            bookingDate: firstBooking.booking_date,
-          });
-        }
-      }
-    }
+    console.log(`Successfully created ${bookings.length} bookings`);
 
     return NextResponse.json({
       success: true,
-      bookings,
-      tickets,
-      message: 'Payment verified and bookings created successfully',
+      message: "Payment verified and bookings created",
+      bookings: bookings,
+      paymentId: razorpay_payment_id,
     });
   } catch (error: any) {
-    console.error('Error verifying payment:', error);
+    console.error("Error in payment verification:", error);
     return NextResponse.json(
-      { success: false, message: error.message || 'Internal server error' },
+      { success: false, message: error.message || "Internal server error" },
       { status: 500 }
     );
   }
