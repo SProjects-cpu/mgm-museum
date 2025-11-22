@@ -49,64 +49,39 @@ export function ShowsClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch shows data from GraphQL API
+  // Fetch shows data from exhibitions API
   useEffect(() => {
     const fetchShows = async () => {
       try {
         setLoading(true);
-        const response = await fetch('/api/graphql', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            query: `
-              query GetShows($type: String) {
-                shows(type: $type) {
-                  id
-                  slug
-                  name
-                  type
-                  description
-                  durationMinutes
-                  thumbnailUrl
-                  status
-                  pricing {
-                    ticketType
-                    price
-                  }
-                  timeSlots {
-                    id
-                    startTime
-                    endTime
-                    capacity
-                    availableSeats
-                    active
-                  }
-                }
-              }
-            `,
-            variables: {
-              type: selectedType === "all" ? null : selectedType
-            }
-          }),
-        });
+        const params = new URLSearchParams();
+        if (selectedType !== 'all') {
+          params.append('category', selectedType);
+        }
 
+        const response = await fetch(`/api/exhibitions?${params}`);
         const result = await response.json();
 
-        if (result.errors) {
-          console.error('GraphQL errors:', result.errors);
-          // Still try to use partial data if available
-          if (result.data?.shows) {
-            setShows(result.data.shows);
-            // Show warning but don't fail completely
-            setError(`Warning: ${result.errors[0].message}`);
-          } else {
-            throw new Error(result.errors[0].message);
-          }
-        } else {
-          setShows(result.data.shows || []);
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to fetch shows');
         }
+
+        // Map exhibitions to shows format
+        const mappedShows: Show[] = (result.exhibitions || []).map((ex: any) => ({
+          id: ex.id,
+          slug: ex.slug,
+          name: ex.name,
+          type: ex.category,
+          description: ex.description || ex.short_description,
+          durationMinutes: ex.duration_minutes || ex.durationMinutes,
+          thumbnailUrl: ex.images?.[0] || 'https://images.unsplash.com/photo-1502134249126-9f3755a50d78?w=1200&q=80',
+          status: ex.status,
+          pricing: ex.pricing || [],
+          timeSlots: [], // Time slots would need separate API call
+        }));
+
+        setShows(mappedShows);
+        setError(null);
       } catch (err) {
         console.error('Error fetching shows:', err);
         setError(err instanceof Error ? err.message : 'Failed to fetch shows');
