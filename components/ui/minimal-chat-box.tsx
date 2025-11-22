@@ -16,6 +16,85 @@ interface Message {
   text: string
 }
 
+// Component to format and animate assistant messages
+function FormattedMessage({ text, isNew }: { text: string; isNew: boolean }) {
+  const [displayedText, setDisplayedText] = React.useState(isNew ? "" : text)
+  const [currentIndex, setCurrentIndex] = React.useState(0)
+
+  React.useEffect(() => {
+    if (!isNew) {
+      setDisplayedText(text)
+      return
+    }
+
+    if (currentIndex < text.length) {
+      const timeout = setTimeout(() => {
+        setDisplayedText(text.slice(0, currentIndex + 1))
+        setCurrentIndex(currentIndex + 1)
+      }, 20) // Typing speed: 20ms per character
+
+      return () => clearTimeout(timeout)
+    }
+  }, [currentIndex, text, isNew])
+
+  // Parse and format the text
+  const formatText = (content: string) => {
+    const lines = content.split('\n')
+    return lines.map((line, idx) => {
+      // Check if line starts with bullet point
+      if (line.trim().startsWith('•')) {
+        const text = line.replace('•', '').trim()
+        return (
+          <div key={idx} className="flex gap-2 mb-1">
+            <span className="text-blue-600 dark:text-blue-400 font-bold">•</span>
+            <span dangerouslySetInnerHTML={{ __html: highlightKeywords(text) }} />
+          </div>
+        )
+      }
+      // Check if line starts with number (numbered list)
+      else if (/^\d+\./.test(line.trim())) {
+        const match = line.match(/^(\d+\.)(.*)/)
+        if (match) {
+          return (
+            <div key={idx} className="flex gap-2 mb-1">
+              <span className="text-blue-600 dark:text-blue-400 font-bold">{match[1]}</span>
+              <span dangerouslySetInnerHTML={{ __html: highlightKeywords(match[2].trim()) }} />
+            </div>
+          )
+        }
+      }
+      // Regular line
+      else if (line.trim()) {
+        return (
+          <div key={idx} className="mb-2" dangerouslySetInnerHTML={{ __html: highlightKeywords(line) }} />
+        )
+      }
+      return null
+    })
+  }
+
+  // Highlight important keywords
+  const highlightKeywords = (text: string) => {
+    const keywords = [
+      'Opening hours', 'Tuesday to Sunday', 'Monday', 'Closed',
+      'Online Booking', 'Phone Booking', 'Walk-in',
+      'Planetarium', 'Science Gallery', 'Holography', 'Technology Zone',
+      'Adults', 'Children', 'Students', 'Senior Citizens',
+      'Group bookings', 'School groups', 'Family packages',
+      'Address', 'Contact', 'Email', 'Metro', 'Bus', 'Car'
+    ]
+
+    let highlighted = text
+    keywords.forEach(keyword => {
+      const regex = new RegExp(`(${keyword})`, 'gi')
+      highlighted = highlighted.replace(regex, '<strong class="font-semibold text-gray-900 dark:text-white">$1</strong>')
+    })
+    return highlighted
+  }
+
+  return <div className="space-y-1">{formatText(displayedText)}</div>
+}
+
 export default function MinimalChatBox() {
   const [isOpen, setIsOpen] = React.useState(false)
   const [messages, setMessages] = React.useState<Message[]>([])
@@ -166,7 +245,11 @@ export default function MinimalChatBox() {
                           : "self-start bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100"
                       }`}
                     >
-                      {msg.text}
+                      {msg.role === "assistant" ? (
+                        <FormattedMessage text={msg.text} isNew={idx === messages.length - 1} />
+                      ) : (
+                        msg.text
+                      )}
                     </div>
                   ))}
                   {isLoading && (

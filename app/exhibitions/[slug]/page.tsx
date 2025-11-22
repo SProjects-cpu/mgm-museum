@@ -34,6 +34,16 @@ async function getExhibition(slug: string) {
 
     exhibition.contentSections = contentSections || [];
 
+    // Fetch pricing tiers for this exhibition
+    const { data: pricingTiers } = await supabase
+      .from('exhibition_pricing')
+      .select('*')
+      .eq('exhibition_id', exhibition.id)
+      .eq('active', true)
+      .order('price', { ascending: true });
+
+    exhibition.pricing = pricingTiers || [];
+
     return exhibition;
   } catch (error) {
     console.error('Error fetching exhibition:', error);

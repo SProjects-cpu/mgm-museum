@@ -62,6 +62,9 @@ export function PricingManagerWrapper({ exhibitionId }: Props) {
   }, [exhibitionId]);
 
   const handlePricingChange = async (newPricing: PricingTier[]) => {
+    // Immediately update local state for instant UI feedback
+    setPricing(newPricing);
+    
     try {
       setSaving(true);
       
@@ -138,13 +141,11 @@ export function PricingManagerWrapper({ exhibitionId }: Props) {
 
       toast.success('Pricing updated successfully');
       
-      // Force refresh pricing data with a small delay to ensure database updates are complete
-      setTimeout(async () => {
-        await fetchPricing();
-      }, 500);
+      // Refresh pricing data from server to get IDs for new items
+      await fetchPricing();
     } catch (err: any) {
       toast.error(err.message || 'Failed to update pricing');
-      // Revert to previous state
+      // Revert to previous state on error
       await fetchPricing();
     } finally {
       setSaving(false);
