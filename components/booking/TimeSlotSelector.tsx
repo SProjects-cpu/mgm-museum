@@ -111,11 +111,6 @@ export function TimeSlotSelector({
               </div>
             </div>
             <div className="text-right">
-              {slot.pricing.length > 0 && (
-                <div className="text-lg font-bold">
-                  ₹{slot.pricing[0].price}
-                </div>
-              )}
               {slot.isFull ? (
                 <div className="text-sm text-destructive">Fully Booked</div>
               ) : (
