@@ -69,7 +69,11 @@ export async function POST(request: NextRequest) {
         key_secret: razorpayKeySecret,
       });
 
-      console.log('Creating Razorpay order with amount:', amount);
+      console.log('Creating Razorpay order with:', {
+        amount,
+        currency,
+        keyIdPrefix: razorpayKeyId?.substring(0, 8),
+      });
 
       const razorpayOrder = await razorpay.orders.create({
         amount: amount,
@@ -82,7 +86,12 @@ export async function POST(request: NextRequest) {
         },
       });
 
-      console.log('Razorpay order created:', razorpayOrder.id);
+      console.log('Razorpay order created successfully:', {
+        orderId: razorpayOrder.id,
+        amount: razorpayOrder.amount,
+        currency: razorpayOrder.currency,
+        status: razorpayOrder.status,
+      });
       
       // Save payment order to database
       const { error: orderError } = await supabase
@@ -113,9 +122,28 @@ export async function POST(request: NextRequest) {
         isFree: amount === 0,
       });
     } catch (error: any) {
-      console.error("Razorpay API error:", error);
+      console.error("Razorpay API error:", {
+        message: error.message,
+        description: error.description,
+        code: error.code,
+        statusCode: error.statusCode,
+        error: error.error,
+      });
+      
+      // Return user-friendly error message
+      let errorMessage = "Failed to create payment order";
+      if (error.description) {
+        errorMessage = error.description;
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       return NextResponse.json(
-        { success: false, message: `Failed to create payment order: ${error.message}` },
+        { 
+          success: false, 
+          message: errorMessage,
+          errorCode: error.code,
+        },
         { status: 500 }
       );
     }

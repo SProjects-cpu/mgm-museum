@@ -313,6 +313,13 @@ export default function CheckoutPage() {
       return;
     }
 
+    console.log('Initializing Razorpay with order data:', {
+      orderId: orderData.orderId,
+      amount: orderData.amountInPaise,
+      currency: orderData.currency,
+      keyId: orderData.razorpayKeyId?.substring(0, 8),
+    });
+
     const options = {
       key: orderData.razorpayKeyId,
       amount: orderData.amountInPaise,
@@ -345,7 +352,7 @@ export default function CheckoutPage() {
       const rzp = new window.Razorpay(options);
       rzp.on('payment.failed', function (response: any) {
         console.error('Payment failed:', response.error);
-        handlePaymentFailure(response.error);
+        handlePaymentFailure(response.error, orderData.orderId);
       });
       rzp.open();
     } catch (error: any) {
@@ -355,11 +362,18 @@ export default function CheckoutPage() {
     }
   };
 
-  const handlePaymentFailure = async (error: any) => {
+  const handlePaymentFailure = async (error: any, orderId?: string) => {
     setLoading(false);
     const errorMessage = error.description || error.reason || 'Payment failed';
     setError(errorMessage);
     toast.error(errorMessage);
+
+    console.error('Payment failure details:', {
+      code: error.code,
+      description: error.description,
+      reason: error.reason,
+      orderId: orderId,
+    });
 
     // Log failure to backend
     try {
@@ -372,6 +386,7 @@ export default function CheckoutPage() {
             'Authorization': `Bearer ${session.access_token}`,
           },
           body: JSON.stringify({
+            orderId: orderId,
             error: {
               code: error.code,
               description: error.description,
