@@ -10,11 +10,12 @@ export async function GET(
     const supabase = await createClient();
     const exhibitionId = params.id;
 
+    // Use the old pricing table since exhibition_pricing is empty
     const { data: pricing, error } = await supabase
-      .from("exhibition_pricing")
+      .from("pricing")
       .select("*")
       .eq("exhibition_id", exhibitionId)
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: true});
 
     if (error) {
       console.error("Error fetching pricing:", error);
@@ -55,7 +56,7 @@ export async function POST(
 
     // Check if pricing for this ticket type already exists
     const { data: existing } = await supabase
-      .from("exhibition_pricing")
+      .from("pricing")
       .select("id")
       .eq("exhibition_id", exhibitionId)
       .eq("ticket_type", ticketType)
@@ -69,13 +70,13 @@ export async function POST(
     }
 
     const { data, error } = await supabase
-      .from("exhibition_pricing")
+      .from("pricing")
       .insert({
         exhibition_id: exhibitionId,
         ticket_type: ticketType,
         price: parseFloat(price),
         active,
-        valid_from: new Date().toISOString(),
+        valid_from: new Date().toISOString().split('T')[0], // Date only
       } as any)
       .select()
       .single();
@@ -123,7 +124,7 @@ export async function PUT(
     if (active !== undefined) updateData.active = active;
 
     const { data, error } = await supabase
-      .from("exhibition_pricing")
+      .from("pricing")
       // @ts-ignore - Supabase type inference issue with dynamic updates
       .update(updateData)
       .eq("id", pricingId)
@@ -166,7 +167,7 @@ export async function DELETE(
     }
 
     const { error } = await supabase
-      .from("exhibition_pricing")
+      .from("pricing")
       .delete()
       .eq("id", pricingId);
 
