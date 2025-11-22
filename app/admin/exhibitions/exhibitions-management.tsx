@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import * as React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useExhibitionsStore } from "@/lib/store/exhibitions";
 import { Button } from "@/components/ui/button";
@@ -45,7 +46,12 @@ export function ExhibitionsManagement() {
   const [filterStatus, setFilterStatus] = useState("all");
 
   // Zustand store
-  const { exhibitions, deleteExhibition, toggleFeatured } = useExhibitionsStore();
+  const { exhibitions, loading, fetchExhibitions, deleteExhibition, toggleFeatured } = useExhibitionsStore();
+
+  // Fetch exhibitions on mount
+  React.useEffect(() => {
+    fetchExhibitions();
+  }, [fetchExhibitions]);
 
   const filteredExhibitions = exhibitions.filter((exhibition) => {
     const matchesSearch = exhibition.name
@@ -163,6 +169,18 @@ export function ExhibitionsManagement() {
           <CardTitle>All Exhibitions ({filteredExhibitions.length})</CardTitle>
         </CardHeader>
         <CardContent>
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+                <p className="text-muted-foreground">Loading exhibitions...</p>
+              </div>
+            </div>
+          ) : filteredExhibitions.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">No exhibitions found</p>
+            </div>
+          ) : (
           <ResponsiveTable
             cardView={
               <div className="space-y-4">
@@ -362,6 +380,7 @@ export function ExhibitionsManagement() {
               </TableBody>
             </Table>
           </ResponsiveTable>
+          )}
         </CardContent>
       </Card>
     </div>

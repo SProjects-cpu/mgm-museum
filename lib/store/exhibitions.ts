@@ -2,9 +2,13 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { Exhibition } from "@/types";
 import { slugify } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/client";
 
 interface ExhibitionsState {
   exhibitions: Exhibition[];
+  loading: boolean;
+  error: string | null;
+  fetchExhibitions: () => Promise<void>;
   addExhibition: (exhibition: Omit<Exhibition, "id" | "createdAt" | "updatedAt">) => void;
   updateExhibition: (id: string, updates: Partial<Exhibition>) => void;
   deleteExhibition: (id: string) => void;
@@ -182,6 +186,45 @@ export const useExhibitionsStore = create<ExhibitionsState>()(
   persist(
     (set, get) => ({
       exhibitions: initialExhibitions,
+      loading: false,
+      error: null,
+
+      fetchExhibitions: async () => {
+        set({ loading: true, error: null });
+        try {
+          const supabase = createClient();
+          const { data, error } = await supabase
+            .from('exhibitions')
+            .select('*')
+            .order('display_order', { ascending: true });
+
+          if (error) throw error;
+
+          // Transform database format to Exhibition type
+          const exhibitions: Exhibition[] = (data || []).map((ex: any) => ({
+            id: ex.id,
+            slug: ex.slug,
+            name: ex.name,
+            category: ex.category,
+            description: ex.description,
+            shortDescription: ex.short_description,
+            durationMinutes: ex.duration_minutes,
+            capacity: ex.capacity,
+            images: ex.images || [],
+            status: ex.status,
+            featured: ex.featured,
+            displayOrder: ex.display_order,
+            createdAt: new Date(ex.created_at),
+            updatedAt: new Date(ex.updated_at),
+            pricing: [], // Pricing is fetched separately when needed
+          }));
+
+          set({ exhibitions, loading: false });
+        } catch (error: any) {
+          console.error('Error fetching exhibitions:', error);
+          set({ error: error.message, loading: false });
+        }
+      },
 
       addExhibition: (exhibition) => {
         const id = Date.now().toString();
