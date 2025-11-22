@@ -263,6 +263,8 @@ export default function CheckoutPage() {
           'Authorization': `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
+          amount: Math.round(totalAmount * 100), // Convert to paise
+          currency: 'INR',
           cartItems: items.map(item => ({
             exhibitionId: item.exhibitionId,
             showId: item.showId,
@@ -274,7 +276,7 @@ export default function CheckoutPage() {
             exhibitionName: item.exhibitionName,
             showName: item.showName,
           })),
-          userDetails: {
+          contactInfo: {
             name: formData.name,
             email: formData.email,
             phone: formData.phone,

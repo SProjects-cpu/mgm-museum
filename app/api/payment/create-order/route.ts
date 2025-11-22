@@ -18,10 +18,22 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { amount, currency = "INR", cartItems, contactInfo } = body;
 
+    console.log('Create order request:', { amount, currency, cartItemsCount: cartItems?.length });
+
     // Validate required fields
     if (!amount || amount <= 0) {
+      console.error('Invalid amount received:', amount);
       return NextResponse.json(
-        { success: false, message: "Invalid amount" },
+        { success: false, message: `Invalid amount: ${amount}. Amount must be greater than 0.` },
+        { status: 400 }
+      );
+    }
+
+    // Razorpay requires minimum 100 paise (₹1)
+    if (amount < 100) {
+      console.error('Amount too low for Razorpay:', amount);
+      return NextResponse.json(
+        { success: false, message: `Amount too low: ₹${amount/100}. Minimum amount is ₹1.` },
         { status: 400 }
       );
     }
@@ -72,9 +84,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         success: true,
         orderId: orderId,
-        amount: amount,
+        amountInPaise: amount,
         currency: currency,
-        keyId: razorpayKeyId,
+        razorpayKeyId: razorpayKeyId,
+        isFree: amount === 0,
       });
     } catch (error: any) {
       console.error("Razorpay API error:", error);
