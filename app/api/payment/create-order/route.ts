@@ -39,28 +39,56 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if Razorpay credentials are configured
-    const razorpayKeyId = process.env.RAZORPAY_KEY_ID;
+    // Check both NEXT_PUBLIC_ and non-public versions
+    const razorpayKeyId = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID;
     const razorpayKeySecret = process.env.RAZORPAY_KEY_SECRET;
 
+    console.log('Razorpay config check:', {
+      hasKeyId: !!razorpayKeyId,
+      hasKeySecret: !!razorpayKeySecret,
+      keyIdPrefix: razorpayKeyId?.substring(0, 8)
+    });
+
     if (!razorpayKeyId || !razorpayKeySecret) {
-      console.error("Razorpay credentials not configured");
+      console.error("Razorpay credentials not configured", {
+        hasKeyId: !!razorpayKeyId,
+        hasKeySecret: !!razorpayKeySecret
+      });
       return NextResponse.json(
-        { success: false, message: "Payment gateway not configured" },
+        { success: false, message: "Payment gateway not configured. Please contact support." },
         { status: 500 }
       );
     }
 
-    // Create Razorpay order using Razorpay MCP
+    // Create Razorpay order
     try {
-      // For now, return a mock order for testing
-      // TODO: Integrate with actual Razorpay API
-      const orderId = `order_${Date.now()}`;
+      // Use Razorpay SDK to create order
+      const Razorpay = require('razorpay');
+      const razorpay = new Razorpay({
+        key_id: razorpayKeyId,
+        key_secret: razorpayKeySecret,
+      });
+
+      console.log('Creating Razorpay order with amount:', amount);
+
+      const razorpayOrder = await razorpay.orders.create({
+        amount: amount,
+        currency: currency,
+        receipt: `receipt_${Date.now()}`,
+        notes: {
+          user_id: user.id,
+          user_email: contactInfo?.email || user.email,
+          items_count: cartItems?.length || 0,
+        },
+      });
+
+      console.log('Razorpay order created:', razorpayOrder.id);
       
       // Save payment order to database
-      const { data: paymentOrder, error: orderError } = await supabase
+      const { error: orderError } = await supabase
         .from("payment_orders")
         .insert({
-          razorpay_order_id: orderId,
+          razorpay_order_id: razorpayOrder.id,
           user_id: user.id,
           amount: amount,
           currency: currency,
@@ -69,21 +97,16 @@ export async function POST(request: NextRequest) {
           payment_email: contactInfo?.email || user.email,
           payment_contact: contactInfo?.phone || "",
           payment_name: contactInfo?.name || "",
-        } as any)
-        .select()
-        .single();
+        } as any);
 
       if (orderError) {
-        console.error("Error creating payment order:", orderError);
-        return NextResponse.json(
-          { success: false, message: "Failed to create payment order" },
-          { status: 500 }
-        );
+        console.error("Error saving payment order to database:", orderError);
+        // Continue anyway since Razorpay order was created
       }
 
       return NextResponse.json({
         success: true,
-        orderId: orderId,
+        orderId: razorpayOrder.id,
         amountInPaise: amount,
         currency: currency,
         razorpayKeyId: razorpayKeyId,
@@ -92,7 +115,7 @@ export async function POST(request: NextRequest) {
     } catch (error: any) {
       console.error("Razorpay API error:", error);
       return NextResponse.json(
-        { success: false, message: "Failed to create payment order" },
+        { success: false, message: `Failed to create payment order: ${error.message}` },
         { status: 500 }
       );
     }
