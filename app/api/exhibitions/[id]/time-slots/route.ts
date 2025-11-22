@@ -1,79 +1,85 @@
-import { NextRequest } from 'next/server';
-import { getServiceSupabase } from '@/lib/supabase/config';
-import { createErrorResponse, createSuccessResponse } from '@/lib/api/response';
-import { BookingErrorCode } from '@/lib/api/errors';
-import { getTimeSlots, getSlotPricing } from '@/lib/api/booking-queries';
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params;
+    const supabase = await createClient();
+    const exhibitionId = params.id;
     const { searchParams } = new URL(request.url);
-    const date = searchParams.get('date');
+    const dateStr = searchParams.get("date");
 
-    // Validate required parameters
-    if (!date) {
-      return createErrorResponse(
-        BookingErrorCode.VALIDATION_ERROR,
-        'Date parameter is required',
-        400
+    if (!dateStr) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: { message: "Date parameter is required" },
+        },
+        { status: 400 }
       );
     }
 
-    // Validate date format (YYYY-MM-DD)
-    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
-    if (!dateRegex.test(date)) {
-      return createErrorResponse(
-        BookingErrorCode.INVALID_DATE,
-        'Invalid date format. Use YYYY-MM-DD',
-        400
+    // Fetch time slots for the specific date
+    const { data: timeSlots, error: slotsError } = await supabase
+      .from("time_slots")
+      .select("*")
+      .eq("exhibition_id", exhibitionId)
+      .eq("slot_date", dateStr)
+      .eq("active", true)
+      .order("start_time", { ascending: true });
+
+    if (slotsError) {
+      console.error("Error fetching time slots:", slotsError);
+      return NextResponse.json(
+        {
+          success: false,
+          error: { message: "Failed to fetch time slots" },
+        },
+        { status: 500 }
       );
     }
 
-    // Check if id is a UUID or a slug
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-    const supabase = getServiceSupabase();
-    
-    let exhibitionId = id;
-    
-    // Build query based on ID type
-    let query = supabase
-      .from('exhibitions')
-      .select('id, name, status');
-    
-    if (isUUID) {
-      query = query.eq('id', id);
-    } else {
-      query = query.eq('slug', id);
-    }
-    
-    const { data: exhibition, error: exhibitionError } = await query.single();
+    // Fetch pricing for the exhibition
+    const { data: pricing } = await supabase
+      .from("pricing")
+      .select("*")
+      .eq("exhibition_id", exhibitionId)
+      .eq("active", true);
 
-    if (exhibitionError || !exhibition) {
-      return createErrorResponse(
-        BookingErrorCode.VALIDATION_ERROR,
-        'Exhibition not found',
-        404
-      );
-    }
-    
-    exhibitionId = exhibition.id;
+    // Transform time slots to expected format
+    const formattedSlots = (timeSlots || []).map((slot: any) => {
+      const availableCapacity = slot.capacity - (slot.current_bookings || 0);
+      
+      return {
+        id: slot.id,
+        startTime: slot.start_time,
+        endTime: slot.end_time,
+        totalCapacity: slot.capacity,
+        availableCapacity: availableCapacity,
+        bookedCount: slot.current_bookings || 0,
+        isFull: availableCapacity <= 0,
+        pricing: (pricing || []).map((p: any) => ({
+          ticketType: p.ticket_type,
+          price: parseFloat(p.price),
+          label: p.ticket_type.charAt(0).toUpperCase() + p.ticket_type.slice(1),
+        })),
+      };
+    });
 
-    // Get available time slots with pricing
-    const timeSlots = await getTimeSlots(exhibitionId, date);
-
-    return createSuccessResponse({
-      timeSlots,
+    return NextResponse.json({
+      success: true,
+      data: { timeSlots: formattedSlots },
     });
   } catch (error: any) {
-    console.error('[API] Error fetching time slots:', error);
-    return createErrorResponse(
-      BookingErrorCode.NETWORK_ERROR,
-      'Failed to fetch time slots',
-      500,
-      error.message
+    console.error("Error in time-slots API:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: { message: error.message || "Internal server error" },
+      },
+      { status: 500 }
     );
   }
 }
