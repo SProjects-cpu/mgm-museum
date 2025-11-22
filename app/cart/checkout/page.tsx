@@ -110,6 +110,14 @@ export default function CheckoutPage() {
                 throw new Error('Booking date is required. Please try booking again.');
               }
               
+              // Validate selectedTickets array
+              if (!Array.isArray(data.selectedTickets) || data.selectedTickets.length === 0) {
+                console.error('Invalid selectedTickets:', data.selectedTickets);
+                throw new Error('No tickets selected. Please try booking again.');
+              }
+
+              console.log('Selected tickets from storage:', data.selectedTickets);
+
               const tickets = {
                 adult: data.selectedTickets.find((t: any) => t.ticketType.toLowerCase() === 'adult')?.quantity || 0,
                 child: data.selectedTickets.find((t: any) => t.ticketType.toLowerCase() === 'child')?.quantity || 0,
@@ -119,7 +127,10 @@ export default function CheckoutPage() {
 
               const totalTickets = Object.values(tickets).reduce((sum: number, qty) => sum + (qty as number), 0);
 
+              console.log('Parsed tickets:', tickets, 'Total:', totalTickets);
+
               if (totalTickets === 0) {
+                console.error('Total tickets is 0 after parsing');
                 throw new Error('No tickets selected. Please try booking again.');
               }
 
