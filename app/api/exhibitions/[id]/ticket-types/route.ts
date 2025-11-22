@@ -1,87 +1,71 @@
-import { NextRequest } from 'next/server';
-import { getServiceSupabase } from '@/lib/supabase/config';
-import { errorResponse, successResponse } from '@/lib/api/response';
-import { BookingError } from '@/lib/api/errors';
-import { BookingErrorCode } from '@/lib/api/errors';
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+
+const TICKET_TYPE_LABELS: Record<string, string> = {
+  adult: "Adult",
+  child: "Child (5-12 years)",
+  student: "Student (with valid ID)",
+  senior: "Senior Citizen (60+)",
+  group: "Group (10+ people)",
+};
+
+const TICKET_TYPE_DESCRIPTIONS: Record<string, string> = {
+  adult: "Ages 13 and above",
+  child: "Ages 5-12 years",
+  student: "Valid student ID required",
+  senior: "Ages 60 and above",
+  group: "Minimum 10 people",
+};
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id } = await params;
-    const { searchParams } = new URL(request.url);
-    const date = searchParams.get('date');
-    const timeSlotId = searchParams.get('timeSlotId');
+    const supabase = await createClient();
+    const exhibitionId = params.id;
 
-    const supabase = getServiceSupabase();
-    
-    // Check if id is a UUID or a slug
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-    
-    let exhibitionId = id;
-    
-    // If it's a slug, fetch the exhibition ID
-    if (!isUUID) {
-      const { data: exhibition, error } = await supabase
-        .from('exhibitions')
-        .select('id')
-        .eq('slug', id)
-        .single();
-      
-      if (error || !exhibition) {
-        return errorResponse(
-          new BookingError(
-            BookingErrorCode.VALIDATION_ERROR,
-            'Exhibition not found'
-          )
-        );
-      }
-      
-      exhibitionId = exhibition.id;
-    }
-
-    // Check for dynamic pricing if date/timeSlotId provided
-    if (date && timeSlotId) {
-      const { data: dynamicPricing } = await supabase
-        .from('dynamic_pricing')
-        .select('ticket_type, price, label')
-        .eq('exhibition_id', exhibitionId)
-        .eq('active', true)
-        .lte('valid_from', date)
-        .or(`valid_until.is.null,valid_until.gte.${date}`);
-
-      if (dynamicPricing && dynamicPricing.length > 0) {
-        return successResponse({
-          ticketTypes: dynamicPricing.map(p => ({
-            type: p.ticket_type,
-            label: p.label || p.ticket_type,
-            price: parseFloat(p.price),
-          })),
-        });
-      }
-    }
-
-    // Fallback to default pricing
+    // Fetch pricing for the exhibition
     const { data: pricing, error } = await supabase
-      .from('pricing')
-      .select('ticket_type, price')
-      .eq('exhibition_id', exhibitionId)
-      .eq('active', true)
-      .lte('valid_from', date || new Date().toISOString().split('T')[0])
-      .or(`valid_until.is.null,valid_until.gte.${date || new Date().toISOString().split('T')[0]}`);
+      .from("pricing")
+      .select("*")
+      .eq("exhibition_id", exhibitionId)
+      .eq("active", true)
+      .order("ticket_type", { ascending: true });
 
-    if (error) throw error;
+    if (error) {
+      console.error("Error fetching pricing:", error);
+      return NextResponse.json(
+        {
+          success: false,
+          error: { message: "Failed to fetch ticket types" },
+        },
+        { status: 500 }
+      );
+    }
 
-    return successResponse({
-      ticketTypes: (pricing || []).map(p => ({
-        type: p.ticket_type,
-        label: p.ticket_type,
-        price: parseFloat(p.price),
-      })),
+    // Transform pricing to ticket types format
+    const ticketTypes = (pricing || []).map((p: any) => ({
+      type: p.ticket_type,
+      label: TICKET_TYPE_LABELS[p.ticket_type] || p.ticket_type,
+      price: parseFloat(p.price),
+      description: TICKET_TYPE_DESCRIPTIONS[p.ticket_type],
+      minQuantity: 0,
+      maxQuantity: 20,
+    }));
+
+    return NextResponse.json({
+      success: true,
+      data: { ticketTypes },
     });
   } catch (error: any) {
-    console.error('[API] Error fetching ticket types:', error);
-    return errorResponse(error);
+    console.error("Error in ticket-types API:", error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: { message: error.message || "Internal server error" },
+      },
+      { status: 500 }
+    );
   }
 }
