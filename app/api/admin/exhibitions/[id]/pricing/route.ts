@@ -55,12 +55,20 @@ export async function POST(
     }
 
     // Check if pricing for this ticket type already exists
-    const { data: existing } = await supabase
+    const { data: existing, error: checkError } = await supabase
       .from("pricing")
       .select("id")
       .eq("exhibition_id", exhibitionId)
       .eq("ticket_type", ticketType)
-      .single();
+      .maybeSingle(); // Use maybeSingle() instead of single() to avoid error when no row found
+
+    if (checkError) {
+      console.error("Error checking existing pricing:", checkError);
+      return NextResponse.json(
+        { error: "Failed to check existing pricing" },
+        { status: 500 }
+      );
+    }
 
     if (existing) {
       return NextResponse.json(
