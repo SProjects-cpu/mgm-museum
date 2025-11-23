@@ -76,27 +76,27 @@ export async function GET(
       doc.on('end', () => resolve(Buffer.concat(chunks)));
     });
 
-    // Header
-    doc.fontSize(24).font('Helvetica-Bold').text('MGM Museum', { align: 'center' });
+    // Header - use default fonts only
+    doc.fontSize(24).text('MGM Museum', { align: 'center' });
     doc.moveDown(0.5);
-    doc.fontSize(18).font('Helvetica').text('E-Ticket', { align: 'center' });
+    doc.fontSize(18).text('E-Ticket', { align: 'center' });
     doc.moveDown(1);
 
     // Booking Reference
-    doc.fontSize(12).font('Helvetica-Bold').text('Booking Reference:', 50, doc.y);
-    doc.font('Helvetica').text(bookingData.booking_reference, 200, doc.y - 12);
+    doc.fontSize(12).text('Booking Reference:', 50, doc.y);
+    doc.text(bookingData.booking_reference, 200, doc.y - 12);
     doc.moveDown(0.5);
 
     // Exhibition/Show Details
     if (bookingData.exhibitions) {
-      doc.font('Helvetica-Bold').text('Exhibition:', 50, doc.y);
-      doc.font('Helvetica').text(bookingData.exhibitions.title, 200, doc.y - 12);
+      doc.text('Exhibition:', 50, doc.y);
+      doc.text(bookingData.exhibitions.title, 200, doc.y - 12);
       doc.moveDown(0.5);
     }
 
     // Date and Time
-    doc.font('Helvetica-Bold').text('Date:', 50, doc.y);
-    doc.font('Helvetica').text(
+    doc.text('Date:', 50, doc.y);
+    doc.text(
       new Date(bookingData.booking_date).toLocaleDateString('en-US', {
         weekday: 'long',
         year: 'numeric',
@@ -109,8 +109,8 @@ export async function GET(
     doc.moveDown(0.5);
 
     if (bookingData.time_slots) {
-      doc.font('Helvetica-Bold').text('Time:', 50, doc.y);
-      doc.font('Helvetica').text(
+      doc.text('Time:', 50, doc.y);
+      doc.text(
         `${bookingData.time_slots.start_time} - ${bookingData.time_slots.end_time}`,
         200,
         doc.y - 12
@@ -120,20 +120,20 @@ export async function GET(
 
     // Guest Details
     if (bookingData.guest_name) {
-      doc.font('Helvetica-Bold').text('Guest Name:', 50, doc.y);
-      doc.font('Helvetica').text(bookingData.guest_name, 200, doc.y - 12);
+      doc.text('Guest Name:', 50, doc.y);
+      doc.text(bookingData.guest_name, 200, doc.y - 12);
       doc.moveDown(0.5);
     }
 
     // Tickets
     if (bookingData.metadata?.tickets) {
       doc.moveDown(0.5);
-      doc.font('Helvetica-Bold').text('Tickets:', 50, doc.y);
+      doc.text('Tickets:', 50, doc.y);
       doc.moveDown(0.3);
       
       Object.entries(bookingData.metadata.tickets).forEach(([type, count]: [string, any]) => {
         if (count > 0) {
-          doc.font('Helvetica').text(
+          doc.text(
             `${count} x ${type.charAt(0).toUpperCase() + type.slice(1)}`,
             70,
             doc.y
@@ -145,13 +145,13 @@ export async function GET(
 
     // Amount
     doc.moveDown(0.5);
-    doc.font('Helvetica-Bold').text('Total Amount:', 50, doc.y);
-    doc.font('Helvetica').text(`₹${bookingData.total_amount}`, 200, doc.y - 12);
+    doc.text('Total Amount:', 50, doc.y);
+    doc.text(`₹${bookingData.total_amount}`, 200, doc.y - 12);
     doc.moveDown(0.5);
 
     // Status
-    doc.font('Helvetica-Bold').text('Status:', 50, doc.y);
-    doc.font('Helvetica').text(bookingData.status.toUpperCase(), 200, doc.y - 12);
+    doc.text('Status:', 50, doc.y);
+    doc.text(bookingData.status.toUpperCase(), 200, doc.y - 12);
     doc.moveDown(2);
 
     // QR Code
@@ -160,9 +160,9 @@ export async function GET(
     doc.moveDown(10);
 
     // Instructions
-    doc.fontSize(10).font('Helvetica-Bold').text('Important Instructions:', 50, doc.y);
+    doc.fontSize(10).text('Important Instructions:', 50, doc.y);
     doc.moveDown(0.3);
-    doc.fontSize(9).font('Helvetica')
+    doc.fontSize(9)
       .text('• Please arrive at least 15 minutes before your scheduled time', 50, doc.y)
       .text('• Carry a valid ID proof for verification', 50, doc.y + 15)
       .text('• This ticket is non-transferable and non-refundable', 50, doc.y + 30)
