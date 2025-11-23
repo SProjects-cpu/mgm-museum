@@ -26,10 +26,36 @@ export async function POST(request: NextRequest) {
       subtotal,
     } = body;
 
+    console.log('Cart add request:', {
+      timeSlotId,
+      bookingDate,
+      exhibitionId,
+      showId,
+      totalTickets,
+      subtotal,
+      tickets,
+    });
+
     // Validate required fields
-    if (!timeSlotId || !bookingDate || !totalTickets) {
+    if (!timeSlotId || !bookingDate || totalTickets === undefined || totalTickets === null || totalTickets <= 0) {
+      console.error('Missing or invalid required fields:', {
+        hasTimeSlotId: !!timeSlotId,
+        timeSlotId,
+        hasBookingDate: !!bookingDate,
+        bookingDate,
+        totalTickets,
+        totalTicketsType: typeof totalTickets,
+      });
       return NextResponse.json(
-        { success: false, message: "Missing required fields" },
+        { 
+          success: false, 
+          message: "Missing required fields",
+          details: {
+            timeSlotId: !timeSlotId ? 'missing' : 'ok',
+            bookingDate: !bookingDate ? 'missing' : 'ok',
+            totalTickets: totalTickets === undefined || totalTickets === null || totalTickets <= 0 ? 'missing or invalid' : 'ok',
+          }
+        },
         { status: 400 }
       );
     }
@@ -46,19 +72,21 @@ export async function POST(request: NextRequest) {
         .select("name")
         .eq("id", exhibitionId)
         .single();
-      itemName = exhibition?.name || "";
+      itemName = (exhibition as any)?.name || "";
     } else if (showId) {
       const { data: show } = await supabase
         .from("shows")
         .select("name")
         .eq("id", showId)
         .single();
-      itemName = show?.name || "";
+      itemName = (show as any)?.name || "";
     }
 
     // Insert cart item
+    // @ts-ignore - Supabase type inference issue
     const { data: cartItem, error } = await supabase
       .from("cart_items")
+      // @ts-ignore
       .insert({
         user_id: user.id,
         time_slot_id: timeSlotId,
