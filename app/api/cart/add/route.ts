@@ -8,9 +8,20 @@ export async function POST(request: NextRequest) {
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
+    console.log('Cart add auth check:', {
+      hasUser: !!user,
+      userId: user?.id,
+      authError: authError?.message,
+      hasAuthHeader: !!request.headers.get('Authorization'),
+    });
+    
     if (authError || !user) {
+      console.error('Authentication failed:', {
+        error: authError,
+        message: authError?.message,
+      });
       return NextResponse.json(
-        { success: false, message: "Unauthorized" },
+        { success: false, message: "Unauthorized - Please login again" },
         { status: 401 }
       );
     }
