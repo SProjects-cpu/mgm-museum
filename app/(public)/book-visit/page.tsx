@@ -165,16 +165,7 @@ export default function BookVisitPage() {
     } catch (error: any) {
       console.error('Error adding to cart:', error);
       console.error('Error details:', error.message, error.stack);
-      
-      // If session expired, redirect to login
-      if (error.message?.includes('Session expired') || error.message?.includes('Unauthorized')) {
-        toast.error('Session expired. Please login again.');
-        setTimeout(() => {
-          router.push(`/login?redirect=${encodeURIComponent('/book-visit?exhibitionId=' + exhibitionId + '&exhibitionName=' + exhibitionName)}`);
-        }, 1500);
-      } else {
-        toast.error(error.message || 'Failed to add to cart');
-      }
+      toast.error(error.message || 'Failed to add to cart');
       setAddingToCart(false);
     }
   };

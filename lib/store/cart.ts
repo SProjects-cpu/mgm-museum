@@ -67,12 +67,7 @@ export const useCartStore = create<CartStore>()(
 
           if (user) {
             // Get auth session
-            const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-            
-            if (sessionError || !session) {
-              console.error('Session error:', sessionError);
-              throw new Error('Session expired. Please login again.');
-            }
+            const { data: { session } } = await supabase.auth.getSession();
             
             // Call API to reserve seat and save to database
             const response = await fetch('/api/cart/add', {
@@ -95,11 +90,6 @@ export const useCartStore = create<CartStore>()(
             const data = await response.json();
 
             if (!response.ok) {
-              // If unauthorized, clear session and redirect to login
-              if (response.status === 401) {
-                await supabase.auth.signOut();
-                throw new Error('Session expired. Please login again.');
-              }
               throw new Error(data.message || 'Failed to add item to cart');
             }
 
